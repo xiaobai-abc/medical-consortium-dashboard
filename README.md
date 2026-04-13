@@ -13,7 +13,7 @@ bun run dev
 
 ## 环境变量
 
-项目根目录已提供 `.env.example`，按需复制为 `.env.local` 或对应环境文件即可。
+当前项目直接使用根目录 `.env` 或 `.env.local`。
 
 当前初始化的核心变量包括：
 
@@ -38,19 +38,20 @@ src/
   app/
     layout.js
     page.js
-    loading.js
     not-found.js
     ui/
-    components/
-    modules/
-  components/ui/
+  shadcn/ui/
   lib/
   styles/
 ```
 
 ## 当前初始化内容
 
-- 补齐了大屏项目首页骨架
-- 补齐了公共环境变量读取入口
+- 补齐了大屏项目首页基础壳子
+- 已配置静态导出打包
 - 补齐了基础 `next.config.mjs`
 - 修正了 `shadcn/ui` 相关别名
+
+## 打包输出
+
+执行 `bun run build` 后，静态产物会输出到根目录 `out/`。

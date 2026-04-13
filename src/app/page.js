@@ -1,15 +1,12 @@
 import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
-import { connection } from "next/server";
 
 import DashboardShell from "./ui/dashboard-shell";
 
 /**
  * 首页输出极简大屏壳，标题栏展示运行状态与日期信息。
  */
-export default async function HomePage() {
-  await connection();
-
+export default function HomePage() {
   dayjs.locale("zh-cn");
 
   const currentDateLabel = dayjs().format("YYYY年M月D日 dddd");
