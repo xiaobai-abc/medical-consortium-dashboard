@@ -13,7 +13,7 @@ bun run dev
 
 ## 环境变量
 
-项目根目录已提供 `.env.example`，建议按需补充为本地环境文件使用。
+项目根目录已提供 `.env.example`，按需复制为 `.env.local` 或对应环境文件即可。
 
 当前初始化的核心变量包括：
 
@@ -26,6 +26,8 @@ bun run dev
 - `NEXT_PUBLIC_SCREEN_BASE_WIDTH`：大屏设计基线宽度
 - `NEXT_PUBLIC_SCREEN_BASE_HEIGHT`：大屏设计基线高度
 - `NEXT_PUBLIC_USE_MOCK`：是否启用 mock
+
+页面和服务端组件读取环境变量时，直接使用 `process.env`，不额外封装环境读取层。
 
 ## 目录说明
 
