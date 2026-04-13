@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  devIndicators: {
+    position: "bottom-right",
+  },
+  experimental: {
+    optimizePackageImports: ["@antv/l7", "@antv/l7-maps", "echarts"],
+  },
 };
 
 export default nextConfig;

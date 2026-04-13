@@ -1,37 +1,36 @@
 # 项目记忆
 
-前置
+## 项目基础
 
-```
-当前是 next .js 框架
-安装了 
-shadcn-ui  在根目录 .agents 中有组件的参考使用方法 
- dayjs
-样式 => 
- tailwindcss
- tw-animate-css 
-当需要实现动画时 要借助库 
-
-store 是 zustand
-
-```
+- 当前项目基于 `Next.js`。
+- 当前项目使用 `shadcn/ui`，相关实现和用法可参考根目录 `.agents`。
+- 已安装并使用以下工具：
+  - `shadcn-ui`
+  - `dayjs`
+  - `tailwindcss`
+  - `tw-animate-css`
+  - `zustand`
+- `shadcn-ui` 的组件参考说明位于根目录 `.agents` 中。
+- 涉及动画实现时，优先借助 `tw-animate-css` 等现有库能力。
+- 全局状态管理使用 `zustand`。
 
 ## 页面目录规范
 
-页面接口必须采用以下结构：
+页面相关代码统一采用如下结构：
 
 ```text
-app/ 页面/
-   paga.js
-   ui/*.jsx 用于该页面的模块
-   components/*.jsx 用于该页面的组件
-   modules/*.js 用于该页面的固定格式数据抽离
-   
-
+app/页面/
+  page.js
+  ui/*.jsx            # 页面级模块
+  components/*.jsx    # 页面级组件
+  modules/*.js        # 页面固定格式数据抽离
 ```
 
-- 实现函数一定加上注释
-- `area-detail/anti` 目录当前实际承担“按 module 驱动的统一详情页”职责，不同 `module` 对应不同业务类型和不同接口；后续新增功能时优先按 `module` 建立映射配置，不要把接口逻辑直接硬编码在页面组件里。
+- 实现函数必须添加注释。
+- `area-detail/anti` 目录当前实际承担“按 module 驱动的统一详情页”职责。
+- 不同 `module` 对应不同业务类型和不同接口。
+- 后续新增功能时，优先按 `module` 建立映射配置。
+- 不要把接口逻辑直接硬编码在页面组件里。
 
 ## 样式约束
 
@@ -49,9 +48,13 @@ app/ 页面/
 - 不要使用 `try/catch` 包裹 `await`。
 - 异步错误处理统一使用 `.then().catch()`。
 - 涉及时间处理统一使用 `dayjs`。
-- 禁止在页面组件中 声明函数的时候使用 const func = ()=>{} ; 除非是在局部功能很小的时候才可以
-- 不允许在page.js 中使用 "use client";
+- 页面组件中声明函数时，默认不要使用 `const func = () => {}`。
+- 只有在局部功能很小的情况下，才可以使用箭头函数写法。
+- 不允许在 `page.js` 中使用 `"use client"`。
 
-**当你运行 build 的时候 如果 30s 内无新输出，自动检查 .next/lock，结束持锁进程后重试，并把完整日志贴出来。必要时切到 webpack 模式只为拿完整错误。**
+## Build 处理约定
 
-**卡住时允许你 kill 持锁的 node 进程。**
+- 运行 `build` 时，如果 `30s` 内无新输出，自动检查 `.next/lock`。
+- 如有必要，结束持锁进程后重试，并贴出完整日志。
+- 必要时可切换到 `webpack` 模式，仅用于获取完整错误信息。
+- 卡住时，允许结束持锁的 `node` 进程。
