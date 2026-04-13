@@ -9,7 +9,10 @@ shadcn-ui  在根目录 .agents 中有组件的参考使用方法
  dayjs
 样式 => 
  tailwindcss
+ tw-animate-css 
 当需要实现动画时 要借助库 
+
+store 是 zustand
 
 ```
 
