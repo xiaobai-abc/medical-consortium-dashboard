@@ -9,8 +9,8 @@ export default function HomePage() {
   const headerData = getHomeHeaderData();
 
   return (
-    <main className="screen-grid-bg h-screen w-screen overflow-hidden bg-[#031525] text-white">
-      <div className="mx-auto h-screen w-screen py-3.5 px-4.5 grid grid-rows-[auto_1fr]">
+    <main className="screen-grid-bg h-screen w-screen overflow-hidden text-white">
+      <div className="mx-auto h-screen w-screen py-3.5 px-4.5 grid grid-rows-[auto_1fr] ">
         <ScreenHeader
           title={headerData.title}
           statusText={headerData.statusText}

@@ -133,12 +133,22 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 32%),
+      /* radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 32%), */
+      linear-gradient(180deg, #060914 0%, #070b16 40%, #050816 100%),
       linear-gradient(180deg, rgba(5, 20, 38, 0.98) 0%, rgba(2, 10, 25, 1) 100%);
   }
 }
 
 @layer utilities {
+  .scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
   .screen-grid-bg {
     background-image:
       linear-gradient(rgba(94, 234, 212, 0.04) 1px, transparent 1px),
@@ -160,6 +170,3 @@
     flex: 1 1 0%;
   }
 }
-
-
- 

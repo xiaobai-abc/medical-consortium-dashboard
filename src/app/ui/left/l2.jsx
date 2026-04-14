@@ -172,8 +172,8 @@ const trendMetricList = [
   },
 ];
 
-const primaryMetricList = trendMetricList.slice(0, 6);
-const secondaryMetricList = trendMetricList.slice(6);
+const primaryMetricList = trendMetricList.slice(0, 4);
+const secondaryMetricList = trendMetricList.slice(4);
 
 function LeftL2() {
   const [activeMetricKey, setActiveMetricKey] = useState("bloodPressure");
