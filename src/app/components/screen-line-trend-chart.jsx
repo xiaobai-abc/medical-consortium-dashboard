@@ -16,10 +16,10 @@ function createTrendChartOption(dates, values) {
     animationDuration: 900,
     animationEasing: "cubicOut",
     grid: {
-      top: 26,
-      right: 10,
-      bottom: 28,
-      left: 10,
+      top: 20,
+      right: 5,
+      bottom: "1%",
+      left: 5,
       containLabel: true,
     },
     tooltip: {

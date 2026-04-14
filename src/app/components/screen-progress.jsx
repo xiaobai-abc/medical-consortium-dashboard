@@ -62,7 +62,7 @@ function ScreenProgress({
       )}
     >
       <div
-        className={cn("h-2 rounded-full", barClassName)}
+        className={cn("h-full rounded-full", barClassName)}
         style={{
           width: `${safeProgress}%`,
           background: barBackground,

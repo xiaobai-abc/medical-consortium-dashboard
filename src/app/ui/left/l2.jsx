@@ -1,5 +1,6 @@
-
 import ScreenLineTrendChart from "@/app/components/screen-line-trend-chart";
+import { Button } from "@/shadcn/ui/button";
+import { cn } from "../../../lib/utils";
 
 const alertTrendData = [
   { date: "03-16", value: 148 },
@@ -8,7 +9,7 @@ const alertTrendData = [
   { date: "03-31", value: 194 },
   { date: "04-05", value: 168 },
   { date: "04-10", value: 126 },
-  { date: "04-14", value: 156 },
+  { date: "04-14", value: 156 }
 ];
 
 function LeftL2() {
@@ -27,9 +28,13 @@ function LeftL2() {
           className="h-[1px] w-full flex-1 ml-3"
           style={{
             background:
-              "linear-gradient(to right, rgba(155, 109, 247, 0.4) 0%, transparent 100%)",
+              "linear-gradient(to right, rgba(155, 109, 247, 0.4) 0%, transparent 100%)"
           }}
         />
+      </div>
+      {/* 选择部分 */}
+      <div className="mb-3">
+        <MButton>血压</MButton>
       </div>
       <div className="flex-1 rounded-2xl border border-[#7F69D7]/18 bg-[rgba(10,23,47,0.45)] px-3 py-3">
         <ScreenLineTrendChart
@@ -43,3 +48,15 @@ function LeftL2() {
 }
 
 export default LeftL2;
+
+function MButton({ children }) {
+  return (
+    <Button
+      className={cn(
+        "bg-[#00E7FF]/13 rounded-3xl px-3 py-1.5 text-xs border-[#00E7FF]/65 leading-none h-fit hover:bg-[#00E7FF]/20"
+      )}
+      variant="outline">
+      {children}
+    </Button>
+  );
+}
