@@ -154,4 +154,15 @@
   .bd {
     border: 1px solid #fff;
   }
+  .flex-full {
+    flex: 1 1 0%;
+  }
+}
+
+@layer components {
+  .test {
+    background-color: #fff;
+    width: 100px;
+    height: 100px;
+  }
 }

@@ -1,5 +1,6 @@
 import { getHomeHeaderData } from "./modules/home-header";
-import DashboardShell from "./ui/dashboard-shell";
+import ScreenHeader from "./components/screen-header";
+import SectionBody from "./ui/section";
 
 /**
  * 首页输出极简大屏壳，标题栏展示运行状态与日期信息。
@@ -8,9 +9,14 @@ export default function HomePage() {
   const headerData = getHomeHeaderData();
 
   return (
-    <DashboardShell
-      title={headerData.title}
-      statusText={headerData.statusText}
-    />
+    <main className="screen-grid-bg h-screen w-screen overflow-hidden bg-[#031525] text-white">
+      <div className="mx-auto h-screen w-screen py-3.5 px-4.5 grid grid-rows-[auto_1fr]">
+        <ScreenHeader
+          title={headerData.title}
+          statusText={headerData.statusText}
+        />
+        <SectionBody></SectionBody>
+      </div>
+    </main>
   );
 }
