@@ -1,4 +1,76 @@
 import ScreenProgress from "@/app/components/screen-progress";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/shadcn/ui/scroll-area";
+
+const measurementItems = [
+  {
+    title: "血压",
+    value: 12426,
+    colors: ["#59c2dd", "#55b8d8", "#476fb4"],
+  },
+  {
+    title: "血糖",
+    value: 8273,
+    colors: ["#776cdb", "#55b8d8", "#476fb4"],
+  },
+  {
+    title: "心率",
+    value: 6958,
+    colors: ["#59c2dd", "#55b8d8", "#476fb4"],
+  },
+  {
+    title: "总胆固醇",
+    value: 5261,
+    colors: ["#776cdb", "#55b8d8", "#4470b1"],
+  },
+  {
+    title: "尿酸",
+    value: 4213,
+    colors: ["#59c2dd", "#55b8d8", "#4470b1"],
+  },
+  {
+    title: "甘油三酯",
+    value: 2931,
+    colors: ["#59c2dd", "#5dc18c", "#3e8a9f"],
+  },
+  {
+    title: "低密度脂蛋白",
+    value: 2603,
+    colors: ["#776cdb", "#55b8d8", "#4470b1"],
+  },
+  {
+    title: "高密度脂蛋白",
+    value: 2064,
+    colors: ["#59c2dd", "#5dc18c", "#3e8a9f"],
+  },
+  {
+    title: "血红蛋白",
+    value: 1948,
+    colors: ["#59c2dd", "#55b8d8", "#4470b1"],
+  },
+  {
+    title: "肌酐",
+    value: 1837,
+    colors: ["#776cdb", "#55b8d8", "#4470b1"],
+  },
+  {
+    title: "血酮",
+    value: 1258,
+    colors: ["#59c2dd", "#5dc18c", "#3e8a9f"],
+  },
+  {
+    title: "乳酸",
+    value: 3125,
+    colors: ["#776cdb", "#55b8d8", "#4470b1"],
+  },
+];
+
+const maxMeasurementValue = measurementItems.reduce(function getMaxValue(
+  currentMaxValue,
+  currentItem
+) {
+  return Math.max(currentMaxValue, currentItem.value);
+}, 0);
 
 function LeftL1() {
   return (
@@ -12,8 +84,23 @@ function LeftL1() {
               "linear-gradient(to right, rgba(0, 231, 255, 0.35) 0%, transparent 100%)"
           }}></div>
       </div>
-      <div className="flex-1 bd mb-4">
-        <ProgressBlock title="测量完成进度" value="12,456" progress={67} />
+      <div className="flex-1 mb-4">
+        <ScrollArea className={cn("h-full ")}>
+          <div className="pr-2">
+            {measurementItems.map(function renderMeasurementItem(item, index) {
+              return (
+                <ProgressBlock
+                  key={`${item.title}-${item.value}`}
+                  title={item.title}
+                  value={item.value}
+                  progress={Math.round((item.value / maxMeasurementValue) * 100)}
+                  colors={item.colors}
+                  className={index === 0 ? "" : "pt-4"}
+                />
+              );
+            })}
+          </div>
+        </ScrollArea>
       </div>
       <div className="flex items-center">
         <div className=" rounded-[50px] bd1 border-[#00E7FF]/35 px-5 py-2 flex-1">
@@ -31,15 +118,24 @@ function LeftL1() {
   );
 }
 
-function ProgressBlock({ title, value, progress }) {
+function ProgressBlock({ title, value, progress, colors, className }) {
   return (
-    <div className="">
-      <div className="flex items-center justify-between ">
-        <h5 className="text-xs text-[#E8F0FF] leading-none">{title}</h5>
-        <span className="text-sm text-[#9FB5DA] leading-none">{value}</span>
+    <div className={className}>
+      <div className="flex items-center justify-between">
+        <h5 className="text-[13px] text-[#E8F0FF] leading-none tracking-[0.04em]">
+          {title}
+        </h5>
+        <span className="text-[12px] text-[#A9B8D8] leading-none tracking-[0.08em]">
+          {value.toLocaleString("zh-CN")}
+        </span>
       </div>
       <div className="pt-2">
-        <ScreenProgress progress={progress} />
+        <ScreenProgress
+          progress={progress}
+          colors={colors}
+          trackClassName="border border-[#1E4B87]/70 bg-transparent"
+          barClassName="shadow-[0_0_14px_rgba(89,194,221,0.28)]"
+        />
       </div>
     </div>
   );
