@@ -1,0 +1,20 @@
+/* 
+覆盖顺讯
+@layer theme
+@layer base
+@layer components
+@layer utilities
+
+
+*/
+
+@layer components {
+  .test {
+    background-color: #fff;
+    width: 100px;
+    height: 100px;
+  }
+  .bd1 {
+    border: 1px solid #1d3b7a;
+  }
+}

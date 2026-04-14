@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@import "./use.css";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -159,10 +161,5 @@
   }
 }
 
-@layer components {
-  .test {
-    background-color: #fff;
-    width: 100px;
-    height: 100px;
-  }
-}
+
+ 

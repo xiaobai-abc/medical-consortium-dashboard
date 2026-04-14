@@ -13,9 +13,7 @@ export default function NotFound() {
         <h1 className="pt-5 text-4xl font-semibold tracking-[0.08em]">
           页面不存在
         </h1>
-        <p className="pt-5 text-base leading-8 text-slate-300">
-          当前访问地址未匹配到可用页面，你可以先返回首页继续初始化大屏模块。
-        </p>
+        
         <div className="pt-8">
           <Link
             href="/"

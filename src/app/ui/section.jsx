@@ -12,7 +12,7 @@ import RightR2 from "./right/r2";
 
 function SectionBody() {
   return (
-    <section className={cn("bd", "flex w-full")}>
+    <section className={cn("flex w-full")}>
       {/* 圣杯布局 */}
       {/* 左 中 右 */}
       <div className="h-full flex flex-col w-[22%] min-w-[420px]">

@@ -1,18 +1,17 @@
-
 import "@/styles/globals.css";
 
 export const metadata = {
   title: {
     default: "医共体管理平台",
-    template: "%s | 医共体管理平台",
+    template: "%s | 医共体管理平台"
   },
-  description: "医共体管理平台大屏项目初始化骨架。",
-  applicationName: "医共体管理平台",
+  description: "医共体管理平台大屏",
+  applicationName: "医共体管理平台"
 };
 
 export const viewport = {
   themeColor: "#031525",
-  colorScheme: "dark",
+  colorScheme: "dark"
 };
 
 /**
@@ -20,7 +19,7 @@ export const viewport = {
  */
 export default function RootLayout({ children }) {
   return (
-    <html lang="zh-CN" className="h-full antialiased">
+    <html lang="zh-CN" className="h-full">
       <body className="min-h-full bg-background text-foreground">
         {children}
       </body>
