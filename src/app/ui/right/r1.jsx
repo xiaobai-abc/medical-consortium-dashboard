@@ -1,8 +1,10 @@
+"use client";
+
 import { Button } from "@/shadcn/ui/button";
 import { cn } from "../../../lib/utils";
 import { ScrollArea } from "@/shadcn/ui/scroll-area";
 
-function RightR1() {
+function RightR1({ onOpenDeviceMonitorDialog }) {
   return (
     <div
       className="w-full flex-1 h-0 mb-3 bd1 rounded-2xl px-3.5 py-4 flex flex-col"
@@ -13,7 +15,12 @@ function RightR1() {
       <div className="w-full flex items-center mb-2">
         <div className="flex items-center">
           <h3 className="text-sm text-[#9FB5DA] mr-3">物联网设备监控</h3>
-          <ViewAllButton>查看全部</ViewAllButton>
+          <ViewAllButton
+            onClick={function handleViewAllClick() {
+              onOpenDeviceMonitorDialog("all");
+            }}>
+            查看全部
+          </ViewAllButton>
         </div>
         <div
           className="h-px w-full flex-1 ml-3"
@@ -24,8 +31,22 @@ function RightR1() {
         />
       </div>
       <div className="flex justify-between gap-x-3 mb-3">
-        <BlockTT id={1}></BlockTT>
-        <BlockTT id={2}></BlockTT>
+        <BlockTT
+          id={1}
+          title="在线设备"
+          value="1824"
+          onClick={function handleOnlineClick() {
+            onOpenDeviceMonitorDialog("online");
+          }}
+        />
+        <BlockTT
+          id={2}
+          title="离线设备"
+          value="326"
+          onClick={function handleOfflineClick() {
+            onOpenDeviceMonitorDialog("offline");
+          }}
+        />
       </div>
       <h3 className="text-sm text-[#9FB5DA] mb-2">异常数据实时预警</h3>
       <ScrollArea className="flex-1 h-0 -mr-1">
@@ -56,7 +77,7 @@ function Item() {
   );
 }
 
-function ViewAllButton({ children }) {
+function ViewAllButton({ children, onClick }) {
   return (
     <Button
       className={cn(
@@ -64,15 +85,18 @@ function ViewAllButton({ children }) {
         "text-xs text-[#E8F0FF] font-thin"
       )}
       variant="outline"
-      size="xs">
+      size="xs"
+      onClick={onClick}>
       {children}
     </Button>
   );
 }
 
-function BlockTT({ id }) {
+function BlockTT({ id, title, value, onClick }) {
   return (
-    <div className="bd1 rounded-2xl px-3.5 py-3 flex items-center flex-1 bg-[#0B1530]/35">
+    <div
+      className="bd1 rounded-2xl px-3.5 py-3 flex items-center flex-1 bg-[#0B1530]/35 cursor-pointer transition-colors hover:bg-[rgba(17,31,61,0.72)]"
+      onClick={onClick}>
       <div
         className={cn(
           "w-8 h-8 rounded-full border mr-3",
@@ -82,8 +106,8 @@ function BlockTT({ id }) {
           background: `radial-gradient(circle at left 40% top 40%, ${id == 1 ? "rgb(0 231 255 / 35%)" : "rgb(160 107 255 / 35%)"} 0%, transparent 55%)`
         }}></div>
       <div className="">
-        <h6 className="text-xs text-[#9FB5DA]/90">在线设备</h6>
-        <span className="text-white text-[18px]">1824</span>
+        <h6 className="text-xs text-[#9FB5DA]/90">{title}</h6>
+        <span className="text-white text-[18px]">{value}</span>
       </div>
     </div>
   );
