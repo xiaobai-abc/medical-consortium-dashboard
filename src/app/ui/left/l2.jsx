@@ -198,7 +198,7 @@ function LeftL2() {
       className="w-full h-[320px] bd1 rounded-2xl px-3.5 py-4 flex flex-col"
       style={{
         background:
-          "linear-gradient(rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
+          "radial-gradient(ellipse at left 10% top 10%, rgb(0 231 255 / 10%), transparent 55%),linear-gradient(rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
       }}>
       <div className="w-full flex items-center mb-3">
         <h3 className="text-sm text-[#9FB5DA]">近30日异常数据报警趋势</h3>
