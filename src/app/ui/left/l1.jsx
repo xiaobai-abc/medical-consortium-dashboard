@@ -188,16 +188,18 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
     <Dialog open={Boolean(activeMeasurementItem)} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="w-[760px] max-w-[calc(100%-2rem)] border-0 bg-transparent p-0 text-white ring-0 sm:max-w-[760px]">
+        className="w-[760px] max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 sm:max-w-[760px]">
         <div
-          className="bd1 rounded-2xl px-4 py-4 flex min-h-[420px] flex-col"
+          className="bd1 rounded-2xl px-4 py-4 flex flex-col"
           style={{
             background:
               "radial-gradient(ellipse at left 10% top 10%, rgb(0 231 255 / 10%), transparent 55%),linear-gradient(to bottom,rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
           }}>
           <div className="w-full flex items-center justify-between mb-2">
             <h2 className="text-base text-white font-bold">
-              {activeMeasurementItem ? activeMeasurementItem.title : ""}
+              {activeMeasurementItem
+                ? activeMeasurementItem.title + "数据统计"
+                : ""}
             </h2>
 
             <div className="pl-3">
@@ -255,6 +257,28 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
                 1910次
               </span>
             </div>
+          </div>
+          <h2 className="text-base text-white font-bold my-3">所有指标对比</h2>
+          {/* <ScrollArea className={cn("h-[520px] ")}></ScrollArea> */}
+          <div className=" space-y-2">
+            {measurementItems.map((item) => {
+              return (
+                <div
+                  key={item.title}
+                  className={cn(
+                    "p-3 bg-[rgba(29,59,122,0.2)] hover:bg-[rgba(29,59,122,0.4)] transition-colors duration-300",
+                    "rounded-[3px] flex items-center justify-between"
+                  )}>
+                  <span className=" leading-none text-sm text-[#e8f0ff] ">
+                    {item.title}
+                  </span>
+                  <span className="leading-none text-sm text-[rgba(159,181,218,0.9)] ">
+                    <span className="mr-1">测量: 8530 </span>
+                    异常: 1280(15.0%)
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </DialogContent>
