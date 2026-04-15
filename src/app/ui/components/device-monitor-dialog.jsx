@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogTitle
 } from "@/shadcn/ui/dialog";
+import DeviceMonitorFilterSelect from "./device-monitor-filter-select";
 import { ScrollArea } from "../../../shadcn/ui/scroll-area";
 
 const dialogTitleMap = {
@@ -21,14 +22,14 @@ const dialogTitleMap = {
  */
 function DeviceMonitorDialog({ open, onOpenChange, dialogType }) {
   const dialogTitle = dialogTitleMap[dialogType] || dialogTitleMap.all;
-  console.log(dialogTitle);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
         className="w-[980px] max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 sm:max-w-[980px]">
         <div
-          className="bd1 rounded-2xl px-4 py-4 flex flex-col"
+          className="bd1 rounded-2xl px-4 py-4 flex flex-col bg-[#1b233a]"
           style={{
             background:
               "radial-gradient(ellipse at left 10% top 10%, rgb(0 231 255 / 10%), transparent 55%),linear-gradient(to bottom,rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
@@ -37,6 +38,9 @@ function DeviceMonitorDialog({ open, onOpenChange, dialogType }) {
             <DialogTitle className="text-base text-white font-bold">
               {dialogTitle}
             </DialogTitle>
+            <div className="ml-auto mr-0">
+              <DeviceMonitorFilterSelect />
+            </div>
             <div className="pl-3">
               <DialogClose
                 render={
@@ -51,7 +55,32 @@ function DeviceMonitorDialog({ open, onOpenChange, dialogType }) {
             </div>
           </div>
           <hr className="text-[#1D3B7A]/35 my-3" />
-          <ScrollArea className="min-h-[460px] bd"></ScrollArea>
+          <ScrollArea className="min-h-[460px]">
+            <div>
+              <div className="py-4.5 px-3.5 border border-[#1D3B7A]/35 rounded-[10px]">
+                <div className="flex items-center justify-between">
+                  <h6 className=" leading-none text-sm text-[#E8F0FF]/95 font-bold">
+                    DEV-100000
+                  </h6>
+                  <div className="border border-[#FF4D4F]/35  flex items-center justify-between px-2 py-1 rounded-[10px]">
+                    <span className="text-[#FF4D4F] text-xs leading-none">
+                      离线
+                    </span>
+                  </div>
+                </div>
+                <div className="flex mt-3">
+                  <div className="space-y-2.5 flex-1">
+                    <ItemLab l="设备类型" c="啊电力科技撒离开家"></ItemLab>
+                    <ItemLab l="所属医院" c="医院A"></ItemLab>
+                  </div>
+                  <div className="space-y-2.5 flex-1">
+                    <ItemLab l="设备类型" c="啊电力科技撒离开家"></ItemLab>
+                    <ItemLab l="所属医院" c="医院A"></ItemLab>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
         </div>
       </DialogContent>
     </Dialog>
@@ -59,3 +88,12 @@ function DeviceMonitorDialog({ open, onOpenChange, dialogType }) {
 }
 
 export default DeviceMonitorDialog;
+
+function ItemLab({ l, c }) {
+  return (
+    <div className="flex items-center">
+      <span className="text-sm text-[#9FB5DA]/85">{l}:</span>
+      <span className="text-sm text-[#E8F0FF]/90 ml-2">{c}</span>
+    </div>
+  );
+}
