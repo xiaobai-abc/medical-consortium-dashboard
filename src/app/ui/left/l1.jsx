@@ -74,11 +74,13 @@ const maxMeasurementValue = measurementItems.reduce(function getMaxValue(
 
 function LeftL1() {
   return (
-    <div className="w-full flex-1 h-0 mb-3 bd1 rounded-2xl py-4 px-3.5 flex flex-col">
+    <div className="w-full flex-1 h-0 mb-3 bd1 rounded-2xl py-4 px-3.5 flex flex-col" style={{
+      background : "linear-gradient(rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
+    }}>
       <div className="w-full flex items-center mb-3 ">
         <h3 className="text-sm text-[#9FB5DA]">检测项目数据统计</h3>
         <div
-          className="h-[1px] w-full flex-1 ml-3"
+          className="h-px w-full flex-1 ml-3"
           style={{
             background:
               "linear-gradient(to right, rgba(0, 231, 255, 0.35) 0%, transparent 100%)"

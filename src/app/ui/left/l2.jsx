@@ -9,7 +9,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "@/shadcn/ui/select";
 import { cn } from "../../../lib/utils";
 
@@ -24,8 +24,8 @@ const trendMetricList = [
       { date: "03-31", value: 194 },
       { date: "04-05", value: 168 },
       { date: "04-10", value: 126 },
-      { date: "04-14", value: 156 },
-    ],
+      { date: "04-14", value: 156 }
+    ]
   },
   {
     key: "bloodSugar",
@@ -37,8 +37,8 @@ const trendMetricList = [
       { date: "03-31", value: 167 },
       { date: "04-05", value: 154 },
       { date: "04-10", value: 132 },
-      { date: "04-14", value: 145 },
-    ],
+      { date: "04-14", value: 145 }
+    ]
   },
   {
     key: "heartRate",
@@ -50,8 +50,8 @@ const trendMetricList = [
       { date: "03-31", value: 126 },
       { date: "04-05", value: 114 },
       { date: "04-10", value: 88 },
-      { date: "04-14", value: 103 },
-    ],
+      { date: "04-14", value: 103 }
+    ]
   },
   {
     key: "cholesterol",
@@ -63,8 +63,8 @@ const trendMetricList = [
       { date: "03-31", value: 121 },
       { date: "04-05", value: 104 },
       { date: "04-10", value: 81 },
-      { date: "04-14", value: 93 },
-    ],
+      { date: "04-14", value: 93 }
+    ]
   },
   {
     key: "uricAcid",
@@ -76,8 +76,8 @@ const trendMetricList = [
       { date: "03-31", value: 108 },
       { date: "04-05", value: 92 },
       { date: "04-10", value: 71 },
-      { date: "04-14", value: 81 },
-    ],
+      { date: "04-14", value: 81 }
+    ]
   },
   {
     key: "triglyceride",
@@ -89,8 +89,8 @@ const trendMetricList = [
       { date: "03-31", value: 96 },
       { date: "04-05", value: 84 },
       { date: "04-10", value: 63 },
-      { date: "04-14", value: 71 },
-    ],
+      { date: "04-14", value: 71 }
+    ]
   },
   {
     key: "ldl",
@@ -102,8 +102,8 @@ const trendMetricList = [
       { date: "03-31", value: 84 },
       { date: "04-05", value: 71 },
       { date: "04-10", value: 55 },
-      { date: "04-14", value: 61 },
-    ],
+      { date: "04-14", value: 61 }
+    ]
   },
   {
     key: "hdl",
@@ -115,8 +115,8 @@ const trendMetricList = [
       { date: "03-31", value: 65 },
       { date: "04-05", value: 58 },
       { date: "04-10", value: 43 },
-      { date: "04-14", value: 47 },
-    ],
+      { date: "04-14", value: 47 }
+    ]
   },
   {
     key: "hemoglobin",
@@ -128,8 +128,8 @@ const trendMetricList = [
       { date: "03-31", value: 69 },
       { date: "04-05", value: 59 },
       { date: "04-10", value: 46 },
-      { date: "04-14", value: 52 },
-    ],
+      { date: "04-14", value: 52 }
+    ]
   },
   {
     key: "creatinine",
@@ -141,8 +141,8 @@ const trendMetricList = [
       { date: "03-31", value: 63 },
       { date: "04-05", value: 56 },
       { date: "04-10", value: 39 },
-      { date: "04-14", value: 48 },
-    ],
+      { date: "04-14", value: 48 }
+    ]
   },
   {
     key: "ketone",
@@ -154,8 +154,8 @@ const trendMetricList = [
       { date: "03-31", value: 46 },
       { date: "04-05", value: 41 },
       { date: "04-10", value: 30 },
-      { date: "04-14", value: 33 },
-    ],
+      { date: "04-14", value: 33 }
+    ]
   },
   {
     key: "lacticAcid",
@@ -167,9 +167,9 @@ const trendMetricList = [
       { date: "03-31", value: 82 },
       { date: "04-05", value: 71 },
       { date: "04-10", value: 56 },
-      { date: "04-14", value: 64 },
-    ],
-  },
+      { date: "04-14", value: 64 }
+    ]
+  }
 ];
 
 const primaryMetricList = trendMetricList.slice(0, 4);
@@ -187,16 +187,23 @@ function LeftL2() {
   const values = activeMetric.data.map(function mapValue(item) {
     return item.value;
   });
-  const isActiveMetricInSelect = secondaryMetricList.some(function hasMetric(item) {
-    return item.key === activeMetricKey;
-  });
+  const isActiveMetricInSelect = secondaryMetricList.some(
+    function hasMetric(item) {
+      return item.key === activeMetricKey;
+    }
+  );
 
   return (
-    <div className="w-full h-[320px] bd1 rounded-2xl px-3.5 py-4 flex flex-col">
+    <div
+      className="w-full h-[320px] bd1 rounded-2xl px-3.5 py-4 flex flex-col"
+      style={{
+        background:
+          "linear-gradient(rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
+      }}>
       <div className="w-full flex items-center mb-3">
         <h3 className="text-sm text-[#9FB5DA]">近30日异常数据报警趋势</h3>
         <div
-          className="h-[1px] w-full flex-1 ml-3"
+          className="h-px w-full flex-1 ml-3"
           style={{
             background:
               "linear-gradient(to right, rgba(155, 109, 247, 0.4) 0%, transparent 100%)"
@@ -214,8 +221,7 @@ function LeftL2() {
                 className={index === 0 ? "" : "ml-2"}
                 onClick={function handleClick() {
                   setActiveMetricKey(item.key);
-                }}
-              >
+                }}>
                 {item.label}
               </MetricButton>
             );
@@ -226,12 +232,10 @@ function LeftL2() {
             value={isActiveMetricInSelect ? activeMetricKey : ""}
             onValueChange={function handleValueChange(value) {
               setActiveMetricKey(value);
-            }}
-          >
+            }}>
             <SelectTrigger
               className="h-8 min-w-[96px] rounded-[10px] border border-[#7F69D7]/55 bg-[rgba(12,24,52,0.88)] px-3 text-xs text-[#D6E0F5] hover:bg-[rgba(16,30,61,0.96)]"
-              size="sm"
-            >
+              size="sm">
               <SelectValue>
                 {isActiveMetricInSelect ? activeMetric.label : "更多指标"}
               </SelectValue>
@@ -242,8 +246,7 @@ function LeftL2() {
                   <SelectItem
                     key={item.key}
                     value={item.key}
-                    className="rounded-[8px] text-xs focus:bg-[#776cdb]/18 focus:text-white"
-                  >
+                    className="rounded-[8px] text-xs focus:bg-[#776cdb]/18 focus:text-white">
                     {item.label}
                   </SelectItem>
                 );
@@ -276,12 +279,8 @@ function MetricButton({ children, isActive, className, onClick }) {
         className
       )}
       variant="outline"
-      onClick={onClick}
-    >
+      onClick={onClick}>
       {children}
     </Button>
   );
 }
-
-   
-

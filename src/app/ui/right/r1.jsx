@@ -16,7 +16,7 @@ function RightR1() {
           <ViewAllButton>查看全部</ViewAllButton>
         </div>
         <div
-          className="h-[1px] w-full flex-1 ml-3"
+          className="h-px w-full flex-1 ml-3"
           style={{
             background:
               "linear-gradient(to right, rgba(0, 231, 255, 0.35) 0%, transparent 100%)"
