@@ -1,10 +1,13 @@
 "use client";
 
 import { Button } from "@/shadcn/ui/button";
+import { useDeviceMonitorDialog } from "@/app/ui/components/device-monitor-dialog/context";
 import { cn } from "../../../lib/utils";
 import { ScrollArea } from "@/shadcn/ui/scroll-area";
 
-function RightR1({ onOpenDeviceMonitorDialog }) {
+function RightR1() {
+  const { openDeviceMonitorDialog } = useDeviceMonitorDialog();
+
   return (
     <div
       className="w-full flex-1 h-0 mb-3 bd1 rounded-2xl px-3.5 py-4 flex flex-col"
@@ -17,7 +20,7 @@ function RightR1({ onOpenDeviceMonitorDialog }) {
           <h3 className="text-sm text-[#9FB5DA] mr-3">物联网设备监控</h3>
           <ViewAllButton
             onClick={function handleViewAllClick() {
-              onOpenDeviceMonitorDialog("all");
+              openDeviceMonitorDialog("all");
             }}>
             查看全部
           </ViewAllButton>
@@ -36,7 +39,9 @@ function RightR1({ onOpenDeviceMonitorDialog }) {
           title="在线设备"
           value="1824"
           onClick={function handleOnlineClick() {
-            onOpenDeviceMonitorDialog("online");
+            openDeviceMonitorDialog("online", {
+              deviceStatus: "online"
+            });
           }}
         />
         <BlockTT
@@ -44,7 +49,9 @@ function RightR1({ onOpenDeviceMonitorDialog }) {
           title="离线设备"
           value="326"
           onClick={function handleOfflineClick() {
-            onOpenDeviceMonitorDialog("offline");
+            openDeviceMonitorDialog("offline", {
+              deviceStatus: "offline"
+            });
           }}
         />
       </div>

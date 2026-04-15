@@ -7,8 +7,10 @@ import {
   DialogContent,
   DialogTitle
 } from "@/shadcn/ui/dialog";
-import DeviceMonitorFilterSelect from "./device-monitor-filter-select";
-import { ScrollArea } from "../../../shadcn/ui/scroll-area";
+import { ScrollArea } from "@/shadcn/ui/scroll-area";
+
+import { useDeviceMonitorDialog } from "./context";
+import DeviceMonitorFilterSelect from "./filter-select";
 
 const dialogTitleMap = {
   all: "物联网设备监控",
@@ -18,13 +20,28 @@ const dialogTitleMap = {
 };
 
 /**
- * 设备监控相关入口统一复用同一个弹窗壳子。
+ * 设备监控弹窗根组件在页面中只挂载一次，所有入口共享这一份实例。
  */
-function DeviceMonitorDialog({ open, onOpenChange, dialogType }) {
-  const dialogTitle = dialogTitleMap[dialogType] || dialogTitleMap.all;
+function DeviceMonitorDialogRoot() {
+  const {
+    isOpen,
+    dialogType,
+    dialogPayload,
+    closeDeviceMonitorDialog
+  } = useDeviceMonitorDialog();
+  const dialogTitle =
+    dialogPayload && dialogPayload.title
+      ? dialogPayload.title
+      : dialogTitleMap[dialogType] || dialogTitleMap.all;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={function handleOpenChange(nextOpen) {
+        if (!nextOpen) {
+          closeDeviceMonitorDialog();
+        }
+      }}>
       <DialogContent
         showCloseButton={false}
         className="w-[980px] max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 sm:max-w-[980px]">
@@ -87,7 +104,7 @@ function DeviceMonitorDialog({ open, onOpenChange, dialogType }) {
   );
 }
 
-export default DeviceMonitorDialog;
+export default DeviceMonitorDialogRoot;
 
 function ItemLab({ l, c }) {
   return (

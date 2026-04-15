@@ -3,7 +3,7 @@ import DeviceTotalDashboardCard from "./components/device-total-dashboard-card";
 import FollowUpDashboardCard from "./components/follow-up-dashboard-card";
 
 // 顶部的 dashboard
-function TopDashboard({ onOpenDeviceMonitorDialog }) {
+function TopDashboard() {
   return (
     <div className="mb-3 flex gap-x-3">
       <div
@@ -52,11 +52,7 @@ function TopDashboard({ onOpenDeviceMonitorDialog }) {
       {/* --- */}
       <FollowUpDashboardCard />
       {/* --- */}
-      <DeviceTotalDashboardCard
-        onClick={function handleDeviceTotalClick() {
-          onOpenDeviceMonitorDialog("total");
-        }}
-      />
+      <DeviceTotalDashboardCard />
     </div>
   );
 }

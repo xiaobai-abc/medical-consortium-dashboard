@@ -23,7 +23,7 @@ const deviceOptions = [
 ];
 
 /**
- * 设备筛选下拉独立抽离，弹窗内部只做引用。
+ * 设备筛选下拉独立抽离，弹窗根组件只负责引用。
  */
 function DeviceMonitorFilterSelect() {
   return (
