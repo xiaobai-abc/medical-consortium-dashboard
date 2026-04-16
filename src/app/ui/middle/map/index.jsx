@@ -1,4 +1,14 @@
+import HangzhouL7Map from "./components/hangzhou-l7-map";
+import { createHangzhouMapData } from "./lib/create-map-data";
+import { getHangzhouGeoJson } from "./lib/get-map-geojson";
+
+/**
+ * 中部地图卡片只负责读取本地 GeoJSON，并引用独立地图组件。
+ */
 function MainMap() {
+  const hangzhouGeoJson = getHangzhouGeoJson();
+  const mapData = createHangzhouMapData(hangzhouGeoJson);
+
   return (
     <div
       className="w-full flex-1 h-0 mb-3 bd1 rounded-2xl px-3.5 py-4 flex flex-col"
@@ -19,7 +29,7 @@ function MainMap() {
         />
       </div>
 
-      <div className="flex-1 h-0 bd">{/* 地图板块 */}</div>
+      <HangzhouL7Map mapData={mapData} />
     </div>
   );
 }
