@@ -1,12 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import * as echarts from "echarts/core";
-import { LineChart } from "echarts/charts";
-import { GridComponent, TooltipComponent } from "echarts/components";
-import { CanvasRenderer } from "echarts/renderers";
-
-echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
+import { echarts } from "@/lib/echarts/register-line";
+import { useECharts } from "@/lib/echarts/use-echarts";
 
 /**
  * 生成折线趋势图配置，统一紫色渐变和大屏坐标样式。
@@ -119,26 +114,8 @@ function createTrendChartOption(dates, values) {
  * ECharts 折线趋势图组件，负责渲染和尺寸自适应。
  */
 function ScreenLineTrendChart({ dates, values, className }) {
-  const chartRef = useRef(null);
-
-  useEffect(function initializeTrendChart() {
-    if (!chartRef.current) {
-      return;
-    }
-
-    const chartInstance = echarts.init(chartRef.current);
-    const chartOption = createTrendChartOption(dates, values);
-    const resizeObserver = new ResizeObserver(function resizeChart() {
-      chartInstance.resize();
-    });
-
-    chartInstance.setOption(chartOption);
-    resizeObserver.observe(chartRef.current);
-
-    return function cleanupTrendChart() {
-      resizeObserver.disconnect();
-      chartInstance.dispose();
-    };
+  const chartRef = useECharts(function createOption() {
+    return createTrendChartOption(dates, values);
   }, [dates, values]);
 
   return <div ref={chartRef} className={className} />;

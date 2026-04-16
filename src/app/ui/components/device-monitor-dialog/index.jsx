@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { Button } from "@/shadcn/ui/button";
 import {
   Dialog,
@@ -10,6 +12,7 @@ import {
 import { ScrollArea } from "@/shadcn/ui/scroll-area";
 
 import { useDeviceMonitorDialog } from "./context";
+import DeviceMonitorDetailDialog from "./detail-dialog";
 import DeviceMonitorFilterSelect from "./filter-select";
 
 const dialogTitleMap = {
@@ -19,10 +22,42 @@ const dialogTitleMap = {
   total: "设备总数"
 };
 
+const deviceList = [
+  {
+    deviceCode: "DEV-100000",
+    statusText: "离线",
+    statusColor: "#FF4D4F",
+    deviceType: "血糖尿酸分析仪 GUE-101",
+    metricName: "血糖、尿酸",
+    hospitalName: "仓前街道社区卫生服务中心",
+    departmentName: "慢病管理科",
+    installLocation: "2 号楼 3 层随访室",
+    patientName: "张敏",
+    gender: "女",
+    age: "56 岁",
+    phone: "138****5621",
+    doctorName: "李医生",
+    doctorPhone: "139****2088",
+    lastUpdateTime: "2026-04-16 09:12",
+    lastFollowUpTime: "2026-04-15 16:30",
+    historyDates: [
+      "04-10",
+      "04-11",
+      "04-12",
+      "04-13",
+      "04-14",
+      "04-15",
+      "04-16"
+    ],
+    historyValues: [6.8, 7.1, 6.5, 7.4, 7.0, 6.7, 7.3]
+  }
+];
+
 /**
  * 设备监控弹窗根组件在页面中只挂载一次，所有入口共享这一份实例。
  */
 function DeviceMonitorDialogRoot() {
+  const [activeDeviceDetail, setActiveDeviceDetail] = useState(null);
   const {
     isOpen,
     dialogType,
@@ -39,6 +74,7 @@ function DeviceMonitorDialogRoot() {
       open={isOpen}
       onOpenChange={function handleOpenChange(nextOpen) {
         if (!nextOpen) {
+          setActiveDeviceDetail(null);
           closeDeviceMonitorDialog();
         }
       }}>
@@ -74,32 +110,63 @@ function DeviceMonitorDialogRoot() {
           <hr className="text-[#1D3B7A]/35 my-3" />
           <ScrollArea className="min-h-[460px]">
             <div>
-              <div className="py-4.5 px-3.5 border border-[#1D3B7A]/35 rounded-[10px]">
-                <div className="flex items-center justify-between">
-                  <h6 className=" leading-none text-sm text-[#E8F0FF]/95 font-bold">
-                    DEV-100000
-                  </h6>
-                  <div className="border border-[#FF4D4F]/35  flex items-center justify-between px-2 py-1 rounded-[10px]">
-                    <span className="text-[#FF4D4F] text-xs leading-none">
-                      离线
-                    </span>
+              {deviceList.map(function renderDeviceCard(deviceItem) {
+                return (
+                  <div
+                    key={deviceItem.deviceCode}
+                    className="py-4.5 px-3.5 border border-[#1D3B7A]/35 rounded-[10px] cursor-pointer transition-colors hover:bg-[rgba(17,31,61,0.48)]"
+                    onClick={function handleOpenDetail() {
+                      setActiveDeviceDetail(deviceItem);
+                    }}>
+                    <div className="flex items-center justify-between">
+                      <h6 className=" leading-none text-sm text-[#E8F0FF]/95 font-bold">
+                        {deviceItem.deviceCode}
+                      </h6>
+                      <div
+                        className="flex items-center justify-between px-2 py-1 rounded-[10px]"
+                        style={{
+                          border: `1px solid ${deviceItem.statusColor}59`
+                        }}>
+                        <span
+                          className="text-xs leading-none"
+                          style={{
+                            color: deviceItem.statusColor
+                          }}>
+                          {deviceItem.statusText}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex mt-3">
+                      <div className="space-y-2.5 flex-1">
+                        <ItemLab l="设备类型" c={deviceItem.deviceType}></ItemLab>
+                        <ItemLab l="检测项目" c={deviceItem.metricName}></ItemLab>
+                        <ItemLab
+                          l="所属医院"
+                          c={deviceItem.hospitalName}></ItemLab>
+                      </div>
+                      <div className="space-y-2.5 flex-1">
+                        <ItemLab
+                          l="最近更新"
+                          c={deviceItem.lastUpdateTime}></ItemLab>
+                        <ItemLab l="患者姓名" c={deviceItem.patientName}></ItemLab>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex mt-3">
-                  <div className="space-y-2.5 flex-1">
-                    <ItemLab l="设备类型" c="啊电力科技撒离开家"></ItemLab>
-                    <ItemLab l="所属医院" c="医院A"></ItemLab>
-                  </div>
-                  <div className="space-y-2.5 flex-1">
-                    <ItemLab l="设备类型" c="啊电力科技撒离开家"></ItemLab>
-                    <ItemLab l="所属医院" c="医院A"></ItemLab>
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </ScrollArea>
         </div>
       </DialogContent>
+      <DeviceMonitorDetailDialog
+        deviceDetail={activeDeviceDetail}
+        open={Boolean(activeDeviceDetail)}
+        onOpenChange={function handleDetailOpenChange(nextOpen) {
+          if (!nextOpen) {
+            setActiveDeviceDetail(null);
+          }
+        }}
+      />
     </Dialog>
   );
 }
