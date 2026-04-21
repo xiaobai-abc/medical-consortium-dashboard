@@ -1,12 +1,9 @@
-import { readFileSync } from "fs";
-import path from "path";
-
 /**
- * 从本地 src/json 读取杭州市 GeoJSON，确保地图完全离线可用。
+ * 通过静态资源请求读取杭州市 GeoJSON。
+ * 这里不依赖 Node 文件系统，保证 static export 后仍然可用。
  */
-export function getHangzhouGeoJson() {
-  const geoJsonPath = path.join(process.cwd(), "src/json/330100.geojson");
-  const geoJsonText = readFileSync(geoJsonPath, "utf-8");
+export async function getHangzhouGeoJson() {
+  const response = await fetch("/json/330100.geojson");
 
-  return JSON.parse(geoJsonText);
+  return response.json();
 }

@@ -1,3 +1,5 @@
+import { createMapBarGeoJson } from "./create-map-bar-data";
+
 const PRIMARY_REGION_NAME = "余杭区";
 const REGION_BLOCK_COLORS = [
   "#1C8DFF",
@@ -8,6 +10,9 @@ const REGION_BLOCK_COLORS = [
   "#FF9B71",
   "#A78BFA"
 ];
+const REGION_LABEL_OFFSET_MAP = {
+  拱墅区: [-0.018, 0.018]
+};
 
 /**
  * 整理地图数据，只保留区块面数据、标签点数据和视角信息三部分。
@@ -23,6 +28,10 @@ export function createHangzhouMapData(geoJson) {
       features: polygonFeatureList
     },
     labelGeoJson: createLabelGeoJson(polygonFeatureList),
+    barGeoJson: createMapBarGeoJson(
+      polygonFeatureList,
+      calculateFeatureAnchor
+    ),
     viewState: {
       bounds: [
         [featureBounds.minLng, featureBounds.minLat],
@@ -74,18 +83,38 @@ function createLabelGeoJson(featureList) {
  * 为单个区县生成中心点标签数据。
  */
 function createLabelPointFeature(feature, featureIndex) {
+  const featureName = feature.properties.name;
+
   return {
     type: "Feature",
     properties: {
       id: feature.properties.id || String(featureIndex + 1),
-      name: feature.properties.name,
+      name: featureName,
       labelColor: feature.properties.labelColor
     },
     geometry: {
       type: "Point",
-      coordinates: calculateFeatureAnchor(feature.geometry)
+      coordinates: calculateLabelCoordinates(feature.geometry, featureName)
     }
   };
+}
+
+/**
+ * 计算标签最终落点。
+ * 默认使用区块包围盒中心；主城区如果存在文字碰撞，再叠加少量人工偏移。
+ */
+function calculateLabelCoordinates(geometry, featureName) {
+  const anchorCoordinates = calculateFeatureAnchor(geometry);
+  const coordinateOffset = REGION_LABEL_OFFSET_MAP[featureName];
+
+  if (!coordinateOffset) {
+    return anchorCoordinates;
+  }
+
+  return [
+    anchorCoordinates[0] + coordinateOffset[0],
+    anchorCoordinates[1] + coordinateOffset[1]
+  ];
 }
 
 /**

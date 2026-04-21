@@ -1,13 +1,46 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import HangzhouL7Map from "./components/hangzhou-l7-map";
 import { createHangzhouMapData } from "./lib/create-map-data";
 import { getHangzhouGeoJson } from "./lib/get-map-geojson";
 
 /**
- * 中部地图卡片只负责读取本地 GeoJSON，并引用独立地图组件。
+ * 中部地图卡片在客户端请求静态 GeoJSON，并引用独立地图组件。
  */
 function MainMap() {
-  const hangzhouGeoJson = getHangzhouGeoJson();
-  const mapData = createHangzhouMapData(hangzhouGeoJson);
+  const [mapData, setMapData] = useState(null);
+
+  /**
+   * 组件挂载后请求静态 GeoJSON，并整理成地图组件可消费的数据结构。
+   */
+  useEffect(function loadMapDataEffect() {
+    let isDisposed = false;
+
+    /**
+     * 拉取静态 GeoJSON 后生成地图数据。
+     */
+    async function loadMapData() {
+      const hangzhouGeoJson = await getHangzhouGeoJson();
+
+      if (isDisposed) {
+        return;
+      }
+
+      setMapData(createHangzhouMapData(hangzhouGeoJson));
+    }
+
+    loadMapData().catch(function handleMapDataError(error) {
+      console.error("Load map geojson failed", error);
+    });
+
+    /**
+     * 组件卸载后阻止过期请求继续写状态。
+     */
+    return function cleanupLoadMapDataEffect() {
+      isDisposed = true;
+    };
+  }, []);
 
   return (
     <div
@@ -29,7 +62,11 @@ function MainMap() {
         />
       </div>
 
-      <HangzhouL7Map mapData={mapData} />
+      {mapData ? (
+        <HangzhouL7Map mapData={mapData} />
+      ) : (
+        <div className="flex-1 h-0 rounded-[20px] border border-[#1D3B7A]/55 bg-[#081225]" />
+      )}
     </div>
   );
 }
