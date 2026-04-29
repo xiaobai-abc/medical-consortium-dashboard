@@ -1,47 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import HangzhouL7Map from "./components/hangzhou-l7-map";
-import { createHangzhouMapData } from "./lib/create-map-data";
-import { getHangzhouGeoJson } from "./lib/get-map-geojson";
+import dynamic from "next/dynamic";
+
+const ThreeBlockMap = dynamic(() => import("../../../test/three-block-map"), {
+  ssr: false,
+});
 
 /**
- * 中部地图卡片在客户端请求静态 GeoJSON，并引用独立地图组件。
+ * 首页地图卡片直接复用 test 页已经调好的 three 地图实现。
+ * 这里保留首页容器和标题，不再走旧的 L7 地图装配链。
  */
 function MainMap() {
-  const [mapData, setMapData] = useState(null);
-
-  /**
-   * 组件挂载后请求静态 GeoJSON，并整理成地图组件可消费的数据结构。
-   */
-  useEffect(function loadMapDataEffect() {
-    let isDisposed = false;
-
-    /**
-     * 拉取静态 GeoJSON 后生成地图数据。
-     */
-    async function loadMapData() {
-      const hangzhouGeoJson = await getHangzhouGeoJson();
-
-      if (isDisposed) {
-        return;
-      }
-
-      setMapData(createHangzhouMapData(hangzhouGeoJson));
-    }
-
-    loadMapData().catch(function handleMapDataError(error) {
-      console.error("Load map geojson failed", error);
-    });
-
-    /**
-     * 组件卸载后阻止过期请求继续写状态。
-     */
-    return function cleanupLoadMapDataEffect() {
-      isDisposed = true;
-    };
-  }, []);
-
   return (
     <div
       className="w-full flex-1 h-0 mb-3 bd1 rounded-2xl px-3.5 py-4 flex flex-col"
@@ -62,11 +31,15 @@ function MainMap() {
         />
       </div>
 
-      {mapData ? (
-        <HangzhouL7Map mapData={mapData} />
-      ) : (
-        <div className="flex-1 h-0 rounded-[20px] border border-[#1D3B7A]/55 bg-[#081225]" />
-      )}
+      <div className="flex-1 h-0 rounded-[20px] overflow-hidden border border-[#1D3B7A]/55 bg-[#081225]">
+        <ThreeBlockMap
+          showTopOverlay={false}
+          showInfoPanel={true}
+          showViewDebugPanel={false}
+          enableCameraDrag={false}
+          logViewConfigToConsole={false}
+        />
+      </div>
     </div>
   );
 }

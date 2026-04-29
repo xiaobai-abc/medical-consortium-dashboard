@@ -903,7 +903,13 @@ function setBarHighlight(barEntries, activeBarIndex) {
   });
 }
 
-export default function ThreeBlockMap() {
+function ThreeBlockMap({
+  showTopOverlay = true,
+  showInfoPanel = true,
+  showViewDebugPanel = SHOW_VIEW_DEBUG_PANEL,
+  enableCameraDrag = ENABLE_CAMERA_DRAG,
+  logViewConfigToConsole = LOG_VIEW_CONFIG_TO_CONSOLE,
+}) {
   const containerRef = useRef(null);
   const infoRef = useRef(null);
   const tooltipRef = useRef(null);
@@ -1029,7 +1035,7 @@ export default function ThreeBlockMap() {
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.enablePan = false;
-      controls.enableRotate = ENABLE_CAMERA_DRAG;
+      controls.enableRotate = enableCameraDrag;
       controls.minDistance = maxSpan * 0.45;
       controls.maxDistance = maxSpan * 2;
       controls.minPolarAngle = THREE.MathUtils.degToRad(
@@ -1050,11 +1056,11 @@ export default function ThreeBlockMap() {
         );
         const viewConfigText = formatViewConfigText(viewConfig);
 
-        if (SHOW_VIEW_DEBUG_PANEL && viewDebugRef.current) {
+        if (showViewDebugPanel && viewDebugRef.current) {
           viewDebugRef.current.textContent = viewConfigText;
         }
 
-        if (!LOG_VIEW_CONFIG_TO_CONSOLE) {
+        if (!logViewConfigToConsole) {
           return;
         }
 
@@ -1316,22 +1322,36 @@ export default function ThreeBlockMap() {
         cleanupTask();
       });
     };
-  }, []);
+  }, [enableCameraDrag, logViewConfigToConsole, showViewDebugPanel]);
 
   return (
     <section className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full rounded-3xl" />
-      <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between">
-        <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/55 px-4 py-3 backdrop-blur">
-          <p className="text-xs tracking-[0.3em] text-cyan-300/75">THREE MAP</p>
-          <p className="mt-1 text-lg text-white">杭州区县 3D 板块地图</p>
+      {showTopOverlay || showInfoPanel ? (
+        <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between">
+          {showTopOverlay ? (
+            <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/55 px-4 py-3 backdrop-blur">
+              <p className="text-xs tracking-[0.3em] text-cyan-300/75">
+                THREE MAP
+              </p>
+              <p className="mt-1 text-lg text-white">杭州区县 3D 板块地图</p>
+            </div>
+          ) : (
+            <div />
+          )}
+          {showInfoPanel ? (
+            <div
+              ref={infoRef}
+              className="rounded-2xl border border-cyan-400/20 bg-slate-950/55 px-4 py-3 text-sm text-cyan-50 backdrop-blur">
+              悬停柱子查看点位详情
+            </div>
+          ) : null}
         </div>
-        <div
-          ref={infoRef}
-          className="rounded-2xl border border-cyan-400/20 bg-slate-950/55 px-4 py-3 text-sm text-cyan-50 backdrop-blur">
+      ) : (
+        <div ref={infoRef} className="hidden">
           悬停柱子查看点位详情
         </div>
-      </div>
+      )}
       <div
         ref={tooltipRef}
         className="pointer-events-none absolute left-0 top-0 z-20 min-w-[180px] rounded-2xl border border-cyan-300/35 bg-[#061629]/92 px-4 py-3 text-white opacity-0 shadow-[0_0_28px_rgba(96,166,246,0.2)] backdrop-blur transition-opacity">
@@ -1350,7 +1370,7 @@ export default function ThreeBlockMap() {
           </span>
         </div>
       </div>
-      {SHOW_VIEW_DEBUG_PANEL ? (
+      {showViewDebugPanel ? (
         <div className="pointer-events-none absolute bottom-4 left-4 z-10 max-w-[340px] rounded-2xl border border-cyan-400/20 bg-slate-950/60 px-4 py-3 backdrop-blur">
           <p className="text-[11px] tracking-[0.24em] text-cyan-300/72">
             VIEW CONFIG
@@ -1373,3 +1393,5 @@ export default function ThreeBlockMap() {
     </section>
   );
 }
+
+export default ThreeBlockMap;
