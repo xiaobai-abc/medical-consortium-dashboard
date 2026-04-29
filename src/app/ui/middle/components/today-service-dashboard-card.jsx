@@ -3,12 +3,13 @@
 import { useState } from "react";
 
 import DashboardCardIcon from "./dashboard-card-icon";
-import FollowUpDialog from "./follow-up-dialog";
+import TodayServiceDialog from "./today-service-dialog";
 
 /**
- * 重点随访卡片负责管理弹窗开关，保持顶部面板入口文件轻量。
+ * “今日总服务人次”只负责入口展示和弹窗开关。
+ * 具体筛选与表格逻辑全部留在弹窗内部，避免卡片和详情内容相互耦合。
  */
-function FollowUpDashboardCard() {
+function TodayServiceDashboardCard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   function handleCardClick() {
@@ -29,26 +30,21 @@ function FollowUpDashboardCard() {
         }}
         onClick={handleCardClick}>
         <div className="flex items-center mb-2">
-          <DashboardCardIcon>📋</DashboardCardIcon>
-          <span className="text-sm text-[#9FB5DA]/90">重点随访</span>
+          <DashboardCardIcon>👤</DashboardCardIcon>
+          <span className="text-sm text-[#9FB5DA]/90">今日总服务人次</span>
         </div>
         <div className="flex items-end justify-between">
-          <h6 className="text-[#00E7FF] text-3xl leading-[24px] font-bold flex items-end">
-            <span>28</span>
-            <span className="text-xs text-[#9FB5DA]/90 leading-[16px] ml-1">
-              人
-            </span>
-          </h6>
+          <span className="text-[#00E7FF] text-3xl leading-[24px] font-bold">
+            9678
+          </span>
 
           <div className="flex items-center leading-none">
-            <span className="text-[#9FB5DA]/85 text-xs mr-2">完成率</span>
-            <span className="text-white text-xs flex items-center justify-center rounded-[10px] px-2 py-0.5 border border-[#1D3B7A]/60">
-              77%
-            </span>
+            <span className="text-[#9FB5DA]/85 text-xs">较昨日</span>
+            <span className="text-[#28E38A]/95 text-xs">↑ 2.0%</span>
           </div>
         </div>
       </div>
-      <FollowUpDialog
+      <TodayServiceDialog
         open={isDialogOpen}
         onOpenChange={handleDialogOpenChange}
       />
@@ -56,4 +52,4 @@ function FollowUpDashboardCard() {
   );
 }
 
-export default FollowUpDashboardCard;
+export default TodayServiceDashboardCard;

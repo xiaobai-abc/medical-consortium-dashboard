@@ -1,22 +1,11 @@
 "use client";
 
+import { useState } from "react";
+
 import { cn } from "../../../../lib/utils";
-import { Button } from "@/shadcn/ui/button";
+import { SearchIcon } from "lucide-react";
 import { ScrollArea } from "@/shadcn/ui/scroll-area";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogTitle
-} from "@/shadcn/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/shadcn/ui/select";
+import { Dialog, DialogContent, DialogTitle } from "@/shadcn/ui/dialog";
 import {
   Table,
   TableBody,
@@ -25,6 +14,9 @@ import {
   TableHeader,
   TableRow
 } from "@/shadcn/ui/table";
+
+import DialogCloseAction from "./dialog-close-action";
+import DialogHeaderSelect from "./dialog-header-select";
 
 const followUpTableRows = [
   {
@@ -79,19 +71,82 @@ const followUpCenterOptions = [
 
 const followUpMetricOptions = ["全部项目", "血压", "血糖", "心率", "尿酸"];
 
-const followUpStatusOptions = ["全部状态", "已随访", "待随访"];
+const followUpStatusOptions = ["是否已随访", "已随访", "待随访"];
 
 /**
- * 重点随访弹窗仅提供统一壳子，内容区留空给后续业务模块填充。
+ * 重点随访列表目前先使用本地静态数据。
+ * 过滤逻辑保持在当前文件内，便于后续替换成接口数据时只改这一层。
+ */
+function getFilteredFollowUpRows(
+  selectedCenter,
+  searchKeyword,
+  selectedMetric,
+  selectedStatus
+) {
+  const normalizedKeyword = searchKeyword.trim();
+
+  return followUpTableRows.filter(function filterRow(row) {
+    const matchesCenter =
+      selectedCenter === followUpCenterOptions[0] ||
+      row.centerName === selectedCenter;
+    const matchesKeyword =
+      normalizedKeyword === "" ||
+      row.patientName.includes(normalizedKeyword) ||
+      row.centerName.includes(normalizedKeyword);
+    const matchesMetric =
+      selectedMetric === followUpMetricOptions[0] ||
+      row.metricName === selectedMetric;
+    const matchesStatus =
+      selectedStatus === followUpStatusOptions[0] ||
+      row.statusText === selectedStatus;
+
+    return matchesCenter && matchesKeyword && matchesMetric && matchesStatus;
+  });
+}
+
+/**
+ * 重点随访弹窗本身只处理筛选状态与表格渲染。
+ * 卡片入口和具体展示结构保持分离，后续更换字段时影响面更小。
  */
 function FollowUpDialog({ open, onOpenChange }) {
+  const [selectedCenter, setSelectedCenter] = useState(followUpCenterOptions[0]);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [selectedMetric, setSelectedMetric] = useState(
+    followUpMetricOptions[0]
+  );
+  const [selectedStatus, setSelectedStatus] = useState(
+    followUpStatusOptions[0]
+  );
+  const filteredRows = getFilteredFollowUpRows(
+    selectedCenter,
+    searchKeyword,
+    selectedMetric,
+    selectedStatus
+  );
+
+  function handleCenterChange(nextCenter) {
+    setSelectedCenter(nextCenter);
+  }
+
+  function handleSearchKeywordChange(event) {
+    setSearchKeyword(event.target.value);
+  }
+
+  function handleMetricChange(nextMetric) {
+    setSelectedMetric(nextMetric);
+  }
+
+  function handleStatusChange(nextStatus) {
+    setSelectedStatus(nextStatus);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 w-[1200px] bd">
+        className="max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 w-[1200px]">
         <div
-          className="bd1 rounded-2xl px-4 py-4 flex flex-col"
+          className="rounded-2xl px-4 py-4 flex flex-col"
           style={{
             background:
               "radial-gradient(ellipse at left 10% top 10%, rgb(0 231 255 / 10%), transparent 55%),linear-gradient(to bottom,rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
@@ -100,182 +155,86 @@ function FollowUpDialog({ open, onOpenChange }) {
             <DialogTitle className="text-base text-white font-bold">
               重点随访
             </DialogTitle>
-            <div className="pl-3">
-              <DialogClose
-                render={
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    className="bg-[#0B1530]/35 rounded-[10px] w-12 h-8 text-xs border-[#1D3B7A]/75 leading-none hover:bg-[#00E7FF]/20 text-[#E8F0FF] font-thin"
-                  />
-                }>
-                关闭
-              </DialogClose>
+            <div className="flex items-center">
+              <div className="relative mr-3">
+                <SearchIcon className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[#6983B3]" />
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  placeholder="搜索患者姓名、社区..."
+                  onChange={handleSearchKeywordChange}
+                  className="h-8 w-[220px] rounded-[10px] border border-[#1D3B7A]/80 bg-[rgba(13,27,56,0.92)] pr-3 pl-9 text-sm text-[#D6E0F5] outline-none placeholder:text-[#6983B3] focus:border-[#2A62A7]"
+                />
+              </div>
+              <DialogCloseAction />
             </div>
           </div>
           <div className="pt-4">
-            {/* rounded-xl border border-[#1D3B7A]/75 bg-[rgba(8,18,40,0.76)] px-3 py-3 */}
-            <div className="">
-              <FollowUpFilterBar />
-              <div className="pt-3">
-                <ScrollArea className="h-[320px] w-full">
-                  <Table className="min-w-full">
-                    {/* <TableHeader>
-                      <TableRow className="border-[#1D3B7A]/80 bg-[rgba(18,34,68,0.88)] hover:bg-[rgba(18,34,68,0.88)]">
-                        <TableHead className="h-11 pl-3 text-xs font-normal text-[#8FA8D3]">
-                          姓名
-                        </TableHead>
-                        <TableHead className="h-11 text-xs font-normal text-[#8FA8D3]">
-                          卫生中心
-                        </TableHead>
-                        <TableHead className="h-11 text-xs font-normal text-[#8FA8D3]">
-                          检测项目
-                        </TableHead>
-                        <TableHead className="h-11 text-xs font-normal text-[#8FA8D3]">
-                          最近检测时间
-                        </TableHead>
-                        <TableHead className="h-11 pr-3 text-xs font-normal text-[#8FA8D3]">
-                          随访状态
-                        </TableHead>
+            <ScrollArea className="h-[320px] w-full">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow className="border-[#1D3B7A]/80 hover:bg-transparent">
+                    <TableHead className="h-14 pl-3">
+                      <DialogHeaderSelect
+                        value={selectedCenter}
+                        options={followUpCenterOptions}
+                        onValueChange={handleCenterChange}
+                        minWidthClassName="min-w-[132px]"
+                      />
+                    </TableHead>
+                    <TableHead className="h-14">
+                      <span className="text-xs font-normal text-[#8FA8D3]">
+                        姓名
+                      </span>
+                    </TableHead>
+                    <TableHead className="h-14">
+                      <DialogHeaderSelect
+                        value={selectedMetric}
+                        options={followUpMetricOptions}
+                        onValueChange={handleMetricChange}
+                        minWidthClassName="min-w-[108px]"
+                      />
+                    </TableHead>
+                    <TableHead className="h-14 pr-3">
+                      <DialogHeaderSelect
+                        value={selectedStatus}
+                        options={followUpStatusOptions}
+                        onValueChange={handleStatusChange}
+                        minWidthClassName="min-w-[108px]"
+                      />
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRows.map(function renderFollowUpRow(row) {
+                    return (
+                      <TableRow
+                        key={row.id}
+                        className="border-[#16325F]/70 hover:bg-[rgba(17,31,61,0.72)]">
+                        <TableCell className="max-w-[220px] pl-3 text-sm text-[#AFC2E2]">
+                          <span className="block truncate">
+                            {row.centerName}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-[#E8F0FF]">
+                          {row.patientName}
+                        </TableCell>
+                        <TableCell className="text-sm text-[#C9D8F2]">
+                          {row.metricName}
+                        </TableCell>
+                        <TableCell className="pr-3">
+                          <FollowUpStatusTag statusText={row.statusText} />
+                        </TableCell>
                       </TableRow>
-                    </TableHeader> */}
-                    <TableBody>
-                      {followUpTableRows.map(function renderFollowUpRow(row) {
-                        return (
-                          <TableRow
-                            key={row.id}
-                            className="border-[#16325F]/70 hover:bg-[rgba(17,31,61,0.72)]">
-                            <TableCell className="pl-3 text-sm text-[#E8F0FF]">
-                              {row.patientName}
-                            </TableCell>
-                            <TableCell className="max-w-[220px] text-sm text-[#AFC2E2]">
-                              <span className="block truncate">
-                                {row.centerName}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-sm text-[#C9D8F2]">
-                              {row.metricName}
-                            </TableCell>
-                            <TableCell className="text-sm text-[#8FA8D3]">
-                              {row.lastCheckTime}
-                            </TableCell>
-                            <TableCell className="pr-3">
-                              <FollowUpStatusTag statusText={row.statusText} />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </div>
-            </div>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/**
- * 顶部筛选条先输出静态壳子，后续再接入真实查询状态。
- */
-function FollowUpFilterBar() {
-  return (
-    <div className="pb-3">
-      <div className="flex items-center flex-wrap">
-        <FilterField label="卫生中心" className="w-[220px]">
-          <Select defaultValue="全部卫生中心">
-            <SelectTrigger
-              size="sm"
-              className="w-full border-[#1D3B7A]/80 bg-[rgba(13,27,56,0.92)] text-[#D6E0F5] hover:bg-[rgba(18,35,70,0.96)]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="border border-[#1D3B7A]/70 bg-[rgba(9,18,38,0.96)] text-[#D6E0F5]">
-              <SelectGroup>
-                {followUpCenterOptions.map(function renderCenterOption(option) {
-                  return (
-                    <SelectItem
-                      key={option}
-                      value={option}
-                      className="rounded-[8px] text-xs focus:bg-[#1D3B7A]/50 focus:text-white">
-                      {option}
-                    </SelectItem>
-                  );
-                })}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </FilterField>
-        <FilterField label="姓名" className="w-[220px] pl-3">
-          <div className="flex items-center">
-            <input
-              type="text"
-              placeholder="请输入姓名"
-              className="h-8 flex-1 rounded-[10px] border border-[#1D3B7A]/80 bg-[rgba(13,27,56,0.92)] px-3 text-sm text-[#D6E0F5] outline-none placeholder:text-[#6983B3] focus:border-[#2A62A7]"
-            />
-          </div>
-        </FilterField>
-        <FilterField label="检测项目" className="w-[160px] pl-3">
-          <Select defaultValue="全部项目">
-            <SelectTrigger
-              size="sm"
-              className="w-full border-[#1D3B7A]/80 bg-[rgba(13,27,56,0.92)] text-[#D6E0F5] hover:bg-[rgba(18,35,70,0.96)]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="border border-[#1D3B7A]/70 bg-[rgba(9,18,38,0.96)] text-[#D6E0F5]">
-              <SelectGroup>
-                {followUpMetricOptions.map(function renderMetricOption(option) {
-                  return (
-                    <SelectItem
-                      key={option}
-                      value={option}
-                      className="rounded-[8px] text-xs focus:bg-[#1D3B7A]/50 focus:text-white">
-                      {option}
-                    </SelectItem>
-                  );
-                })}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </FilterField>
-        <FilterField label="是否已随访" className="w-[160px] pl-3">
-          <Select defaultValue="全部状态">
-            <SelectTrigger
-              size="sm"
-              className="w-full border-[#1D3B7A]/80 bg-[rgba(13,27,56,0.92)] text-[#D6E0F5] hover:bg-[rgba(18,35,70,0.96)]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="border border-[#1D3B7A]/70 bg-[rgba(9,18,38,0.96)] text-[#D6E0F5]">
-              <SelectGroup>
-                {followUpStatusOptions.map(function renderStatusOption(option) {
-                  return (
-                    <SelectItem
-                      key={option}
-                      value={option}
-                      className="rounded-[8px] text-xs focus:bg-[#1D3B7A]/50 focus:text-white">
-                      {option}
-                    </SelectItem>
-                  );
-                })}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </FilterField>
-      </div>
-    </div>
-  );
-}
-
-/**
- * 筛选项使用统一标题和宽度壳子，便于后续继续追加筛选条件。
- */
-function FilterField({ label, className, children }) {
-  return (
-    <div className={className}>
-      <div className="pb-2 text-xs leading-none text-[#7E99C7]">{label}</div>
-      {children}
-    </div>
   );
 }
 

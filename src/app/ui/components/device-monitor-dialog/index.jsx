@@ -17,10 +17,22 @@ import DeviceMonitorFilterSelect from "./filter-select";
 
 const dialogTitleMap = {
   all: "物联网设备监控",
-  online: "在线设备",
+  online: "在线设备数据情况",
   offline: "离线设备",
   total: "设备总数"
 };
+
+const deviceSummaryColumns = [
+  [
+    { label: "设备类型", key: "deviceType" },
+    { label: "检测项目", key: "metricName" },
+    { label: "所属医院", key: "hospitalName" }
+  ],
+  [
+    { label: "最近更新", key: "lastUpdateTime" },
+    { label: "患者姓名", key: "patientName" }
+  ]
+];
 
 const deviceList = [
   {
@@ -58,26 +70,39 @@ const deviceList = [
  */
 function DeviceMonitorDialogRoot() {
   const [activeDeviceDetail, setActiveDeviceDetail] = useState(null);
-  const {
-    isOpen,
-    dialogType,
-    dialogPayload,
-    closeDeviceMonitorDialog
-  } = useDeviceMonitorDialog();
+  const { isOpen, dialogType, dialogPayload, closeDeviceMonitorDialog } =
+    useDeviceMonitorDialog();
   const dialogTitle =
-    dialogPayload && dialogPayload.title
-      ? dialogPayload.title
-      : dialogTitleMap[dialogType] || dialogTitleMap.all;
+    dialogPayload?.title || dialogTitleMap[dialogType] || dialogTitleMap.all;
+  const detailDialogOpen = Boolean(activeDeviceDetail);
+
+  function clearActiveDeviceDetail() {
+    setActiveDeviceDetail(null);
+  }
+
+  function handleDialogOpenChange(nextOpen) {
+    if (nextOpen) {
+      return;
+    }
+
+    clearActiveDeviceDetail();
+    closeDeviceMonitorDialog();
+  }
+
+  function handleDetailOpenChange(nextOpen) {
+    if (nextOpen) {
+      return;
+    }
+
+    clearActiveDeviceDetail();
+  }
+
+  function handleDeviceClick(deviceItem) {
+    setActiveDeviceDetail(deviceItem);
+  }
 
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={function handleOpenChange(nextOpen) {
-        if (!nextOpen) {
-          setActiveDeviceDetail(null);
-          closeDeviceMonitorDialog();
-        }
-      }}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent
         showCloseButton={false}
         className="w-[980px] max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 sm:max-w-[980px]">
@@ -112,46 +137,11 @@ function DeviceMonitorDialogRoot() {
             <div>
               {deviceList.map(function renderDeviceCard(deviceItem) {
                 return (
-                  <div
+                  <DeviceCard
                     key={deviceItem.deviceCode}
-                    className="py-4.5 px-3.5 border border-[#1D3B7A]/35 rounded-[10px] cursor-pointer transition-colors hover:bg-[rgba(17,31,61,0.48)]"
-                    onClick={function handleOpenDetail() {
-                      setActiveDeviceDetail(deviceItem);
-                    }}>
-                    <div className="flex items-center justify-between">
-                      <h6 className=" leading-none text-sm text-[#E8F0FF]/95 font-bold">
-                        {deviceItem.deviceCode}
-                      </h6>
-                      <div
-                        className="flex items-center justify-between px-2 py-1 rounded-[10px]"
-                        style={{
-                          border: `1px solid ${deviceItem.statusColor}59`
-                        }}>
-                        <span
-                          className="text-xs leading-none"
-                          style={{
-                            color: deviceItem.statusColor
-                          }}>
-                          {deviceItem.statusText}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex mt-3">
-                      <div className="space-y-2.5 flex-1">
-                        <ItemLab l="设备类型" c={deviceItem.deviceType}></ItemLab>
-                        <ItemLab l="检测项目" c={deviceItem.metricName}></ItemLab>
-                        <ItemLab
-                          l="所属医院"
-                          c={deviceItem.hospitalName}></ItemLab>
-                      </div>
-                      <div className="space-y-2.5 flex-1">
-                        <ItemLab
-                          l="最近更新"
-                          c={deviceItem.lastUpdateTime}></ItemLab>
-                        <ItemLab l="患者姓名" c={deviceItem.patientName}></ItemLab>
-                      </div>
-                    </div>
-                  </div>
+                    deviceItem={deviceItem}
+                    onClick={handleDeviceClick}
+                  />
                 );
               })}
             </div>
@@ -160,12 +150,8 @@ function DeviceMonitorDialogRoot() {
       </DialogContent>
       <DeviceMonitorDetailDialog
         deviceDetail={activeDeviceDetail}
-        open={Boolean(activeDeviceDetail)}
-        onOpenChange={function handleDetailOpenChange(nextOpen) {
-          if (!nextOpen) {
-            setActiveDeviceDetail(null);
-          }
-        }}
+        open={detailDialogOpen}
+        onOpenChange={handleDetailOpenChange}
       />
     </Dialog>
   );
@@ -173,11 +159,59 @@ function DeviceMonitorDialogRoot() {
 
 export default DeviceMonitorDialogRoot;
 
-function ItemLab({ l, c }) {
+function DeviceCard({ deviceItem, onClick }) {
+  function handleClick() {
+    onClick(deviceItem);
+  }
+
+  return (
+    <div
+      className="py-4.5 px-3.5 border border-[#1D3B7A]/35 rounded-[10px] cursor-pointer transition-colors hover:bg-[rgba(17,31,61,0.48)]"
+      onClick={handleClick}>
+      <div className="flex items-center justify-between">
+        <h6 className="leading-none text-sm text-[#E8F0FF]/95 font-bold">
+          {deviceItem.deviceCode}
+        </h6>
+        <div
+          className="flex items-center justify-between px-2 py-1 rounded-[10px]"
+          style={{
+            border: `1px solid ${deviceItem.statusColor}59`
+          }}>
+          <span
+            className="text-xs leading-none"
+            style={{
+              color: deviceItem.statusColor
+            }}>
+            {deviceItem.statusText}
+          </span>
+        </div>
+      </div>
+      <div className="flex mt-3">
+        {deviceSummaryColumns.map(function renderColumn(columnItems, index) {
+          return (
+            <div key={index} className="space-y-2.5 flex-1">
+              {columnItems.map(function renderItem(item) {
+                return (
+                  <ItemLab
+                    key={item.key}
+                    label={item.label}
+                    content={deviceItem[item.key]}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ItemLab({ label, content }) {
   return (
     <div className="flex items-center">
-      <span className="text-sm text-[#9FB5DA]/85">{l}:</span>
-      <span className="text-sm text-[#E8F0FF]/90 ml-2">{c}</span>
+      <span className="text-sm text-[#9FB5DA]/85">{label}:</span>
+      <span className="text-sm text-[#E8F0FF]/90 ml-2">{content}</span>
     </div>
   );
 }
