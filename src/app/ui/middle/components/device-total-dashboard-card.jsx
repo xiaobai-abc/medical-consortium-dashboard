@@ -7,7 +7,7 @@ import DashboardCardIcon from "./dashboard-card-icon";
 /**
  * 设备总数卡片通过全局 Provider 暴露的上下文方法打开弹窗。
  */
-function DeviceTotalDashboardCard() {
+function DeviceTotalDashboardCard({ value, meta, loading, error }) {
   const { openDeviceMonitorDialog } = useDeviceMonitorDialog();
 
   function handleCardClick() {
@@ -26,17 +26,30 @@ function DeviceTotalDashboardCard() {
         <DashboardCardIcon>⚙</DashboardCardIcon>
         <span className="text-sm text-[#9FB5DA]/90">设备总数</span>
       </div>
-      <div className="flex items-end justify-between">
-        <span className="text-[#00E7FF] text-3xl leading-[24px] font-bold">
-          9678
-        </span>
+        <div className="flex items-end justify-between">
+          <span className="text-[#00E7FF] text-3xl leading-[24px] font-bold">
+            {loading ? "..." : error ? "-" : value}
+          </span>
 
-        <div className="flex items-center leading-none">
-          <span className="text-[#9FB5DA]/85 text-xs">较昨日</span>
-          <span className="text-[#28E38A]/95 text-xs">↑ 2.0%</span>
+          <div className="flex items-center leading-none">
+            <span className="text-[#9FB5DA]/85 text-xs">
+              {meta?.label || "较昨日"}
+            </span>
+            <span
+              className="text-xs"
+              style={{
+                color:
+                  meta?.tone === "down"
+                    ? "#FF4D4F"
+                    : meta?.tone === "up"
+                      ? "#28E38A"
+                      : "#E8F0FF",
+              }}>
+              {loading ? "加载中" : error ? "加载失败" : meta?.value || "-"}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
   );
 }
 

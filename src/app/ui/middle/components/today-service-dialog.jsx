@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { getServiceOverviewPopup } from "@/api";
+import { normalizeServiceOverviewPopup } from "@/app/modules/popup-view-model";
 
 import { Dialog, DialogContent, DialogTitle } from "@/shadcn/ui/dialog";
 import { ScrollArea } from "@/shadcn/ui/scroll-area";
@@ -16,76 +19,8 @@ import {
 import DialogCloseAction from "./dialog-close-action";
 import DialogHeaderSelect from "./dialog-header-select";
 
-const serviceCenterOptions = [
-  "全部卫生中心",
-  "仓前街道社区卫生服务中心",
-  "桐君街道社区卫生服务中心",
-  "城南街道社区卫生服务中心",
-  "凤川街道社区卫生服务中心"
-];
-
-const riskLevelOptions = ["全部等级", "高风险", "中风险", "低风险"];
-
-const serviceTableRows = [
-  {
-    id: "SR-001",
-    centerName: "仓前街道社区卫生服务中心",
-    serviceCount: 325,
-    abnormalCount: 18,
-    riskLevel: "高风险",
-    riskLevelColor: "#FF7A7A"
-  },
-  {
-    id: "SR-002",
-    centerName: "桐君街道社区卫生服务中心",
-    serviceCount: 286,
-    abnormalCount: 11,
-    riskLevel: "中风险",
-    riskLevelColor: "#FFC857"
-  },
-  {
-    id: "SR-003",
-    centerName: "城南街道社区卫生服务中心",
-    serviceCount: 241,
-    abnormalCount: 6,
-    riskLevel: "低风险",
-    riskLevelColor: "#7EF0B1"
-  },
-  {
-    id: "SR-004",
-    centerName: "凤川街道社区卫生服务中心",
-    serviceCount: 198,
-    abnormalCount: 15,
-    riskLevel: "高风险",
-    riskLevelColor: "#FF7A7A"
-  },
-  {
-    id: "SR-005",
-    centerName: "良渚街道社区卫生服务中心",
-    serviceCount: 176,
-    abnormalCount: 9,
-    riskLevel: "中风险",
-    riskLevelColor: "#FFC857"
-  }
-];
-
-/**
- * 这里先用“卫生中心维度”的静态汇总数据。
- * 后续如果接真实接口，只需要替换这一层数据来源和过滤逻辑，
- * 表格列结构与筛选交互都可以保持不变。
- */
-function getFilteredServiceRows(selectedCenter, selectedRiskLevel) {
-  return serviceTableRows.filter(function filterRow(row) {
-    const matchesCenter =
-      selectedCenter === serviceCenterOptions[0] ||
-      row.centerName === selectedCenter;
-    const matchesRiskLevel =
-      selectedRiskLevel === riskLevelOptions[0] ||
-      row.riskLevel === selectedRiskLevel;
-
-    return matchesCenter && matchesRiskLevel;
-  });
-}
+const defaultServiceCenterOptions = [{ label: "全部卫生中心", value: "" }];
+const defaultRiskLevelOptions = [{ label: "全部等级", value: "" }];
 
 /**
  * “今日总服务人次”弹窗只处理两类事情：
@@ -94,14 +29,17 @@ function getFilteredServiceRows(selectedCenter, selectedRiskLevel) {
  * 这样和顶部卡片职责天然分离，后续替换业务字段也更安全。
  */
 function TodayServiceDialog({ open, onOpenChange }) {
-  const [selectedCenter, setSelectedCenter] = useState(serviceCenterOptions[0]);
-  const [selectedRiskLevel, setSelectedRiskLevel] = useState(
-    riskLevelOptions[0]
-  );
-  const filteredRows = getFilteredServiceRows(
-    selectedCenter,
-    selectedRiskLevel
-  );
+  const [selectedCenter, setSelectedCenter] = useState("");
+  const [selectedRiskLevel, setSelectedRiskLevel] = useState("");
+  const [dialogState, setDialogState] = useState({
+    status: "idle",
+    data: {
+      centerOptions: defaultServiceCenterOptions,
+      riskLevelOptions: defaultRiskLevelOptions,
+      items: [],
+    },
+    error: null,
+  });
 
   function handleCenterChange(nextCenter) {
     setSelectedCenter(nextCenter);
@@ -110,6 +48,62 @@ function TodayServiceDialog({ open, onOpenChange }) {
   function handleRiskLevelChange(nextRiskLevel) {
     setSelectedRiskLevel(nextRiskLevel);
   }
+
+  useEffect(
+    function requestServiceOverviewPopup() {
+      if (!open) {
+        return;
+      }
+
+      let disposed = false;
+
+      setDialogState(function setLoadingState(previousState) {
+        return {
+          ...previousState,
+          status: "loading",
+          error: null,
+        };
+      });
+
+      getServiceOverviewPopup({
+        service_center: selectedCenter || undefined,
+        risk_level: selectedRiskLevel || undefined,
+      })
+        .then(function handleSuccess(responseData) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState({
+            status: "success",
+            data: normalizeServiceOverviewPopup(
+              responseData,
+              defaultServiceCenterOptions,
+              defaultRiskLevelOptions
+            ),
+            error: null,
+          });
+        })
+        .catch(function handleError(error) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState(function setErrorState(previousState) {
+            return {
+              ...previousState,
+              status: "error",
+              error,
+            };
+          });
+        });
+
+      return function cleanupServiceOverviewPopupRequest() {
+        disposed = true;
+      };
+    },
+    [open, selectedCenter, selectedRiskLevel]
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,7 +130,7 @@ function TodayServiceDialog({ open, onOpenChange }) {
                     <TableHead className="h-14 pl-3">
                       <DialogHeaderSelect
                         value={selectedCenter}
-                        options={serviceCenterOptions}
+                        options={dialogState.data.centerOptions}
                         onValueChange={handleCenterChange}
                         minWidthClassName="min-w-[132px]"
                       />
@@ -150,7 +144,7 @@ function TodayServiceDialog({ open, onOpenChange }) {
                     <TableHead className="h-14 pr-3">
                       <DialogHeaderSelect
                         value={selectedRiskLevel}
-                        options={riskLevelOptions}
+                        options={dialogState.data.riskLevelOptions}
                         onValueChange={handleRiskLevelChange}
                         minWidthClassName="min-w-[108px]"
                       />
@@ -158,7 +152,7 @@ function TodayServiceDialog({ open, onOpenChange }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRows.map(function renderServiceRow(row) {
+                  {dialogState.data.items.map(function renderServiceRow(row) {
                     return (
                       <TableRow
                         key={row.id}
@@ -182,6 +176,12 @@ function TodayServiceDialog({ open, onOpenChange }) {
                   })}
                 </TableBody>
               </Table>
+              <DialogStatus
+                status={dialogState.status}
+                error={dialogState.error}
+                empty={!dialogState.data.items.length}
+                emptyText="暂无服务总览数据"
+              />
             </ScrollArea>
           </div>
         </div>
@@ -191,3 +191,23 @@ function TodayServiceDialog({ open, onOpenChange }) {
 }
 
 export default TodayServiceDialog;
+
+function DialogStatus({ status, error, empty, emptyText }) {
+  if (status === "loading") {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">弹窗数据加载中...</div>;
+  }
+
+  if (status === "error") {
+    return (
+      <div className="py-8 text-center text-sm text-[#FF9CA2]">
+        {error?.message || "弹窗数据加载失败"}
+      </div>
+    );
+  }
+
+  if (empty) {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">{emptyText}</div>;
+  }
+
+  return null;
+}

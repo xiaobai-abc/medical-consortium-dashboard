@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import ScreenLineTrendChart from "@/app/components/screen-line-trend-chart";
 import { Button } from "@/shadcn/ui/button";
@@ -13,184 +13,48 @@ import {
 } from "@/shadcn/ui/select";
 import { cn } from "../../../lib/utils";
 
-const trendMetricList = [
-  {
-    key: "bloodPressure",
-    label: "血压",
-    data: [
-      { date: "03-16", value: 148 },
-      { date: "03-21", value: 172 },
-      { date: "03-26", value: 135 },
-      { date: "03-31", value: 194 },
-      { date: "04-05", value: 168 },
-      { date: "04-10", value: 126 },
-      { date: "04-14", value: 156 }
-    ]
-  },
-  {
-    key: "bloodSugar",
-    label: "血糖",
-    data: [
-      { date: "03-16", value: 118 },
-      { date: "03-21", value: 136 },
-      { date: "03-26", value: 129 },
-      { date: "03-31", value: 167 },
-      { date: "04-05", value: 154 },
-      { date: "04-10", value: 132 },
-      { date: "04-14", value: 145 }
-    ]
-  },
-  {
-    key: "heartRate",
-    label: "心率",
-    data: [
-      { date: "03-16", value: 92 },
-      { date: "03-21", value: 108 },
-      { date: "03-26", value: 96 },
-      { date: "03-31", value: 126 },
-      { date: "04-05", value: 114 },
-      { date: "04-10", value: 88 },
-      { date: "04-14", value: 103 }
-    ]
-  },
-  {
-    key: "cholesterol",
-    label: "总胆固醇",
-    data: [
-      { date: "03-16", value: 74 },
-      { date: "03-21", value: 96 },
-      { date: "03-26", value: 88 },
-      { date: "03-31", value: 121 },
-      { date: "04-05", value: 104 },
-      { date: "04-10", value: 81 },
-      { date: "04-14", value: 93 }
-    ]
-  },
-  {
-    key: "uricAcid",
-    label: "尿酸",
-    data: [
-      { date: "03-16", value: 66 },
-      { date: "03-21", value: 86 },
-      { date: "03-26", value: 77 },
-      { date: "03-31", value: 108 },
-      { date: "04-05", value: 92 },
-      { date: "04-10", value: 71 },
-      { date: "04-14", value: 81 }
-    ]
-  },
-  {
-    key: "triglyceride",
-    label: "甘油三酯",
-    data: [
-      { date: "03-16", value: 58 },
-      { date: "03-21", value: 72 },
-      { date: "03-26", value: 69 },
-      { date: "03-31", value: 96 },
-      { date: "04-05", value: 84 },
-      { date: "04-10", value: 63 },
-      { date: "04-14", value: 71 }
-    ]
-  },
-  {
-    key: "ldl",
-    label: "低密度脂蛋白",
-    data: [
-      { date: "03-16", value: 49 },
-      { date: "03-21", value: 62 },
-      { date: "03-26", value: 58 },
-      { date: "03-31", value: 84 },
-      { date: "04-05", value: 71 },
-      { date: "04-10", value: 55 },
-      { date: "04-14", value: 61 }
-    ]
-  },
-  {
-    key: "hdl",
-    label: "高密度脂蛋白",
-    data: [
-      { date: "03-16", value: 41 },
-      { date: "03-21", value: 54 },
-      { date: "03-26", value: 49 },
-      { date: "03-31", value: 65 },
-      { date: "04-05", value: 58 },
-      { date: "04-10", value: 43 },
-      { date: "04-14", value: 47 }
-    ]
-  },
-  {
-    key: "hemoglobin",
-    label: "血红蛋白",
-    data: [
-      { date: "03-16", value: 44 },
-      { date: "03-21", value: 57 },
-      { date: "03-26", value: 53 },
-      { date: "03-31", value: 69 },
-      { date: "04-05", value: 59 },
-      { date: "04-10", value: 46 },
-      { date: "04-14", value: 52 }
-    ]
-  },
-  {
-    key: "creatinine",
-    label: "肌酐",
-    data: [
-      { date: "03-16", value: 38 },
-      { date: "03-21", value: 51 },
-      { date: "03-26", value: 45 },
-      { date: "03-31", value: 63 },
-      { date: "04-05", value: 56 },
-      { date: "04-10", value: 39 },
-      { date: "04-14", value: 48 }
-    ]
-  },
-  {
-    key: "ketone",
-    label: "血酮",
-    data: [
-      { date: "03-16", value: 27 },
-      { date: "03-21", value: 35 },
-      { date: "03-26", value: 32 },
-      { date: "03-31", value: 46 },
-      { date: "04-05", value: 41 },
-      { date: "04-10", value: 30 },
-      { date: "04-14", value: 33 }
-    ]
-  },
-  {
-    key: "lacticAcid",
-    label: "乳酸",
-    data: [
-      { date: "03-16", value: 53 },
-      { date: "03-21", value: 68 },
-      { date: "03-26", value: 60 },
-      { date: "03-31", value: 82 },
-      { date: "04-05", value: 71 },
-      { date: "04-10", value: 56 },
-      { date: "04-14", value: 64 }
-    ]
-  }
-];
-
-const primaryMetricList = trendMetricList.slice(0, 4);
-const secondaryMetricList = trendMetricList.slice(4);
-
-function LeftL2() {
-  const [activeMetricKey, setActiveMetricKey] = useState("bloodPressure");
+function LeftL2({ warningTrends, dashboardStatus, dashboardError }) {
+  const trendMetricList = warningTrends?.metrics || [];
+  const [activeMetricKey, setActiveMetricKey] = useState(
+    warningTrends?.defaultMetricKey || trendMetricList[0]?.key || ""
+  );
   const activeMetric =
     trendMetricList.find(function findMetric(item) {
       return item.key === activeMetricKey;
     }) || trendMetricList[0];
-  const dates = activeMetric.data.map(function mapDate(item) {
+  const dates = activeMetric?.data?.map(function mapDate(item) {
     return item.date;
-  });
-  const values = activeMetric.data.map(function mapValue(item) {
+  }) || [];
+  const values = activeMetric?.data?.map(function mapValue(item) {
     return item.value;
-  });
+  }) || [];
+  const primaryMetricList = trendMetricList.slice(0, 4);
+  const secondaryMetricList = trendMetricList.slice(4);
   const isActiveMetricInSelect = secondaryMetricList.some(
     function hasMetric(item) {
       return item.key === activeMetricKey;
     }
+  );
+  const hasTrendData = trendMetricList.length > 0;
+
+  useEffect(
+    function syncActiveMetricKey() {
+      if (!hasTrendData) {
+        setActiveMetricKey("");
+        return;
+      }
+
+      const nextMetricKey = trendMetricList.some(function hasMetric(metric) {
+        return metric.key === activeMetricKey;
+      })
+        ? activeMetricKey
+        : warningTrends?.defaultMetricKey || trendMetricList[0]?.key || "";
+
+      if (nextMetricKey !== activeMetricKey) {
+        setActiveMetricKey(nextMetricKey);
+      }
+    },
+    [activeMetricKey, hasTrendData, trendMetricList, warningTrends?.defaultMetricKey]
   );
 
   return (
@@ -230,6 +94,7 @@ function LeftL2() {
         <div className="pl-2">
           <Select
             value={isActiveMetricInSelect ? activeMetricKey : ""}
+            disabled={!hasTrendData}
             onValueChange={function handleValueChange(value) {
               setActiveMetricKey(value);
             }}>
@@ -256,17 +121,33 @@ function LeftL2() {
         </div>
       </div>
       <div className="flex-1 rounded-2xl border border-[#7F69D7]/18 bg-[rgba(10,23,47,0.45)] px-3 py-3">
-        <ScreenLineTrendChart
-          dates={dates}
-          values={values}
-          className="h-full w-full"
-        />
+        {hasTrendData ? (
+          <ScreenLineTrendChart
+            dates={dates}
+            values={values}
+            className="h-full w-full"
+          />
+        ) : (
+          <StatusPlaceholder status={dashboardStatus} error={dashboardError} />
+        )}
       </div>
     </div>
   );
 }
 
 export default LeftL2;
+
+function StatusPlaceholder({ status, error }) {
+  return (
+    <div className="flex h-full min-h-[180px] items-center justify-center text-sm text-[#9FB5DA]/85">
+      {status === "loading"
+        ? "趋势数据加载中..."
+        : status === "error"
+          ? error?.message || "趋势数据加载失败"
+          : "暂无趋势数据"}
+    </div>
+  );
+}
 
 function MetricButton({ children, isActive, className, onClick }) {
   return (

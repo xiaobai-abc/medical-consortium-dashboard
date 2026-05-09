@@ -1,0 +1,47 @@
+# 安旭
+
+## API Docs
+- 根目录 > Dashboard [获取医共体大屏聚合数据](https://xlws5ht81k.apifox.cn/452873258e0.md): 页面初始化时建议只请求一次该接口，然后把返回结果分发到顶部卡片、检测项目统计、异常趋势、实时预警、设备排行和地图等模块。
+- 根目录 > Dashboard Popups [获取“今日总服务人次”弹窗数据](https://xlws5ht81k.apifox.cn/452873259e0.md): 点击顶部“今日总服务人次”卡片后调用。支持按卫生中心和风险等级筛选。
+- 根目录 > Dashboard Popups [获取“重点随访”弹窗数据](https://xlws5ht81k.apifox.cn/452873260e0.md): 点击顶部“重点随访”卡片后调用。支持按卫生中心、关键字、检测项目和随访状态筛选。`keyword` 会同时匹配患者姓名和卫生中心。
+- 根目录 > Dashboard Popups [获取检测项目统计弹窗数据](https://xlws5ht81k.apifox.cn/452873261e0.md): 点击左侧“检测项目数据统计”的某个项目后调用。`metric` 必填，支持传英文指标键或中文名称。
+- 根目录 > Dashboard Popups [获取实时预警详情弹窗数据](https://xlws5ht81k.apifox.cn/452873262e0.md): 点击右侧“异常数据实时预警”列表项后调用。返回预警基础信息、患者信息、医生信息和近 7 天历史测量曲线。
+- 根目录 > Dashboard Popups [获取设备列表弹窗数据](https://xlws5ht81k.apifox.cn/452873263e0.md): 点击“查看全部 / 在线设备 / 离线设备 / 设备总数 / 医院排行某一行”后调用。返回筛选项、标题统计和设备列表。`dialog_type=online` 时标题为“在线设备数据情况”。
+- 根目录 > Dashboard Popups [获取设备详情弹窗数据](https://xlws5ht81k.apifox.cn/452873264e0.md): 点击设备列表中的某一台设备后调用。返回设备基础信息、患者信息、医生信息和近 7 天历史测量曲线。
+
+## Schemas
+- 根目录 [MessageResponse](https://xlws5ht81k.apifox.cn/270729050d0.md): 
+- 根目录 [ValidationErrorResponse](https://xlws5ht81k.apifox.cn/270729051d0.md): 
+- 根目录 [Meta](https://xlws5ht81k.apifox.cn/270729052d0.md): 
+- 根目录 [PopupMeta](https://xlws5ht81k.apifox.cn/270729053d0.md): 
+- 根目录 [ComparisonFields](https://xlws5ht81k.apifox.cn/270729054d0.md): 
+- 根目录 [DashboardOverviewMetricCard](https://xlws5ht81k.apifox.cn/270729055d0.md): 
+- 根目录 [DashboardOverviewFollowUpCard](https://xlws5ht81k.apifox.cn/270729056d0.md): 
+- 根目录 [DashboardOverviewDevicesCard](https://xlws5ht81k.apifox.cn/270729057d0.md): 
+- 根目录 [MeasurementStatisticItem](https://xlws5ht81k.apifox.cn/270729058d0.md): 
+- 根目录 [WarningTrendPoint](https://xlws5ht81k.apifox.cn/270729059d0.md): 
+- 根目录 [WarningTrendItem](https://xlws5ht81k.apifox.cn/270729060d0.md): 
+- 根目录 [RealtimeWarningItem](https://xlws5ht81k.apifox.cn/270729061d0.md): 
+- 根目录 [DeviceMonitoringRanking](https://xlws5ht81k.apifox.cn/270729062d0.md): 
+- 根目录 [MapDistributionItem](https://xlws5ht81k.apifox.cn/270729063d0.md): 
+- 根目录 [DashboardResponse](https://xlws5ht81k.apifox.cn/270729064d0.md): 
+- 根目录 [RiskLevelOption](https://xlws5ht81k.apifox.cn/270729065d0.md): 
+- 根目录 [ServiceOverviewPopupResponse](https://xlws5ht81k.apifox.cn/270729066d0.md): 
+- 根目录 [ServiceOverviewItem](https://xlws5ht81k.apifox.cn/270729067d0.md): 
+- 根目录 [NullableKeyLabelOption](https://xlws5ht81k.apifox.cn/270729068d0.md): 
+- 根目录 [KeyLabelOption](https://xlws5ht81k.apifox.cn/270729069d0.md): 
+- 根目录 [FollowUpPopupResponse](https://xlws5ht81k.apifox.cn/270729070d0.md): 
+- 根目录 [FollowUpItem](https://xlws5ht81k.apifox.cn/270729071d0.md): 
+- 根目录 [MeasurementPopupResponse](https://xlws5ht81k.apifox.cn/270729072d0.md): 
+- 根目录 [MeasurementDistributionItem](https://xlws5ht81k.apifox.cn/270729073d0.md): 
+- 根目录 [MeasurementComparisonItem](https://xlws5ht81k.apifox.cn/270729074d0.md): 
+- 根目录 [PatientInfo](https://xlws5ht81k.apifox.cn/270729075d0.md): 
+- 根目录 [DoctorInfo](https://xlws5ht81k.apifox.cn/270729076d0.md): 
+- 根目录 [MeasurementHistoryPoint](https://xlws5ht81k.apifox.cn/270729077d0.md): 
+- 根目录 [MeasurementHistorySeries](https://xlws5ht81k.apifox.cn/270729078d0.md): 
+- 根目录 [MeasurementHistory](https://xlws5ht81k.apifox.cn/270729079d0.md): 
+- 根目录 [WarningDetailResponse](https://xlws5ht81k.apifox.cn/270729080d0.md): 
+- 根目录 [DeviceTypeOption](https://xlws5ht81k.apifox.cn/270729081d0.md): 
+- 根目录 [DeviceListPopupResponse](https://xlws5ht81k.apifox.cn/270729082d0.md): 
+- 根目录 [DeviceListItem](https://xlws5ht81k.apifox.cn/270729083d0.md): 
+- 根目录 [DeviceDetailResponse](https://xlws5ht81k.apifox.cn/270729084d0.md): 

@@ -1,6 +1,6 @@
 import { getHomeHeaderData } from "./modules/home-header";
 import ScreenHeader from "./components/screen-header";
-import SectionBody from "./ui/section";
+import HomeDashboardClient from "./ui/home-dashboard-client";
 
 /**
  * 首页输出极简大屏壳，标题栏展示运行状态与日期信息。
@@ -15,7 +15,7 @@ export default function HomePage() {
           title={headerData.title}
           statusText={headerData.statusText}
         />
-        <SectionBody></SectionBody>
+        <HomeDashboardClient />
       </div>
     </main>
   );

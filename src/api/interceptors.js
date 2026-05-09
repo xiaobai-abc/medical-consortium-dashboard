@@ -1,4 +1,9 @@
-import { getUseMockFlag, isSuccessCode } from "./config";
+import {
+  getApiAuthHeaderName,
+  getApiAuthScheme,
+  getUseMockFlag,
+  isSuccessCode,
+} from "./config";
 import { ApiRequestError, normalizeApiError } from "./errors";
 import { getAccessToken } from "./token";
 
@@ -16,9 +21,15 @@ function defaultRequestInterceptor(requestConfig) {
 
   if (requestConfig.withAuth !== false) {
     const accessToken = getAccessToken();
+    const authHeaderName =
+      requestConfig.authHeaderName || getApiAuthHeaderName();
+    const authScheme = requestConfig.authScheme ?? getApiAuthScheme();
 
-    if (accessToken && !headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${accessToken}`);
+    if (accessToken && authHeaderName && !headers.has(authHeaderName)) {
+      headers.set(
+        authHeaderName,
+        authScheme ? `${authScheme} ${accessToken}` : accessToken
+      );
     }
   }
 

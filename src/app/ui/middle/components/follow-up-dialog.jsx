@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { cn } from "../../../../lib/utils";
 import { SearchIcon } from "lucide-react";
@@ -15,114 +15,34 @@ import {
   TableRow
 } from "@/shadcn/ui/table";
 
+import { getFollowUpPopup } from "@/api";
+import { normalizeFollowUpPopup } from "@/app/modules/popup-view-model";
 import DialogCloseAction from "./dialog-close-action";
 import DialogHeaderSelect from "./dialog-header-select";
 
-const followUpTableRows = [
-  {
-    id: "FU-001",
-    centerName: "仓前街道社区卫生服务中心",
-    patientName: "张敏",
-    metricName: "血压",
-    statusText: "已随访",
-    lastCheckTime: "2026-04-14 09:20"
-  },
-  {
-    id: "FU-002",
-    centerName: "桐君街道社区卫生服务中心",
-    patientName: "李国强",
-    metricName: "血糖",
-    statusText: "待随访",
-    lastCheckTime: "2026-04-14 10:45"
-  },
-  {
-    id: "FU-003",
-    centerName: "城南街道社区卫生服务中心",
-    patientName: "周燕",
-    metricName: "心率",
-    statusText: "已随访",
-    lastCheckTime: "2026-04-14 11:10"
-  },
-  {
-    id: "FU-004",
-    centerName: "凤川街道社区卫生服务中心",
-    patientName: "王建华",
-    metricName: "尿酸",
-    statusText: "待随访",
-    lastCheckTime: "2026-04-14 13:36"
-  },
-  {
-    id: "FU-005",
-    centerName: "分水镇中心卫生院",
-    patientName: "陈秀英",
-    metricName: "总胆固醇",
-    statusText: "已随访",
-    lastCheckTime: "2026-04-14 15:18"
-  }
-];
-
-const followUpCenterOptions = [
-  "全部卫生中心",
-  "仓前街道社区卫生服务中心",
-  "桐君街道社区卫生服务中心",
-  "城南街道社区卫生服务中心",
-  "凤川街道社区卫生服务中心"
-];
-
-const followUpMetricOptions = ["全部项目", "血压", "血糖", "心率", "尿酸"];
-
-const followUpStatusOptions = ["是否已随访", "已随访", "待随访"];
-
-/**
- * 重点随访列表目前先使用本地静态数据。
- * 过滤逻辑保持在当前文件内，便于后续替换成接口数据时只改这一层。
- */
-function getFilteredFollowUpRows(
-  selectedCenter,
-  searchKeyword,
-  selectedMetric,
-  selectedStatus
-) {
-  const normalizedKeyword = searchKeyword.trim();
-
-  return followUpTableRows.filter(function filterRow(row) {
-    const matchesCenter =
-      selectedCenter === followUpCenterOptions[0] ||
-      row.centerName === selectedCenter;
-    const matchesKeyword =
-      normalizedKeyword === "" ||
-      row.patientName.includes(normalizedKeyword) ||
-      row.centerName.includes(normalizedKeyword);
-    const matchesMetric =
-      selectedMetric === followUpMetricOptions[0] ||
-      row.metricName === selectedMetric;
-    const matchesStatus =
-      selectedStatus === followUpStatusOptions[0] ||
-      row.statusText === selectedStatus;
-
-    return matchesCenter && matchesKeyword && matchesMetric && matchesStatus;
-  });
-}
+const defaultCenterOptions = [{ label: "全部卫生中心", value: "" }];
+const defaultMetricOptions = [{ label: "全部项目", value: "" }];
+const defaultStatusOptions = [{ label: "是否已随访", value: "" }];
 
 /**
  * 重点随访弹窗本身只处理筛选状态与表格渲染。
  * 卡片入口和具体展示结构保持分离，后续更换字段时影响面更小。
  */
 function FollowUpDialog({ open, onOpenChange }) {
-  const [selectedCenter, setSelectedCenter] = useState(followUpCenterOptions[0]);
+  const [selectedCenter, setSelectedCenter] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [selectedMetric, setSelectedMetric] = useState(
-    followUpMetricOptions[0]
-  );
-  const [selectedStatus, setSelectedStatus] = useState(
-    followUpStatusOptions[0]
-  );
-  const filteredRows = getFilteredFollowUpRows(
-    selectedCenter,
-    searchKeyword,
-    selectedMetric,
-    selectedStatus
-  );
+  const [selectedMetric, setSelectedMetric] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [dialogState, setDialogState] = useState({
+    status: "idle",
+    data: {
+      centerOptions: defaultCenterOptions,
+      metricOptions: defaultMetricOptions,
+      statusOptions: defaultStatusOptions,
+      items: [],
+    },
+    error: null,
+  });
 
   function handleCenterChange(nextCenter) {
     setSelectedCenter(nextCenter);
@@ -139,6 +59,65 @@ function FollowUpDialog({ open, onOpenChange }) {
   function handleStatusChange(nextStatus) {
     setSelectedStatus(nextStatus);
   }
+
+  useEffect(
+    function requestFollowUpPopup() {
+      if (!open) {
+        return;
+      }
+
+      let disposed = false;
+
+      setDialogState(function setLoadingState(previousState) {
+        return {
+          ...previousState,
+          status: "loading",
+          error: null,
+        };
+      });
+
+      getFollowUpPopup({
+        service_center: selectedCenter || undefined,
+        keyword: searchKeyword.trim() || undefined,
+        metric: selectedMetric || undefined,
+        follow_up_status: selectedStatus || undefined,
+      })
+        .then(function handleSuccess(responseData) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState({
+            status: "success",
+            data: normalizeFollowUpPopup(
+              responseData,
+              defaultCenterOptions,
+              defaultMetricOptions,
+              defaultStatusOptions
+            ),
+            error: null,
+          });
+        })
+        .catch(function handleError(error) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState(function setErrorState(previousState) {
+            return {
+              ...previousState,
+              status: "error",
+              error,
+            };
+          });
+        });
+
+      return function cleanupFollowUpPopupRequest() {
+        disposed = true;
+      };
+    },
+    [open, searchKeyword, selectedCenter, selectedMetric, selectedStatus]
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -177,7 +156,7 @@ function FollowUpDialog({ open, onOpenChange }) {
                     <TableHead className="h-14 pl-3">
                       <DialogHeaderSelect
                         value={selectedCenter}
-                        options={followUpCenterOptions}
+                        options={dialogState.data.centerOptions}
                         onValueChange={handleCenterChange}
                         minWidthClassName="min-w-[132px]"
                       />
@@ -190,7 +169,7 @@ function FollowUpDialog({ open, onOpenChange }) {
                     <TableHead className="h-14">
                       <DialogHeaderSelect
                         value={selectedMetric}
-                        options={followUpMetricOptions}
+                        options={dialogState.data.metricOptions}
                         onValueChange={handleMetricChange}
                         minWidthClassName="min-w-[108px]"
                       />
@@ -198,7 +177,7 @@ function FollowUpDialog({ open, onOpenChange }) {
                     <TableHead className="h-14 pr-3">
                       <DialogHeaderSelect
                         value={selectedStatus}
-                        options={followUpStatusOptions}
+                        options={dialogState.data.statusOptions}
                         onValueChange={handleStatusChange}
                         minWidthClassName="min-w-[108px]"
                       />
@@ -206,7 +185,7 @@ function FollowUpDialog({ open, onOpenChange }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRows.map(function renderFollowUpRow(row) {
+                  {dialogState.data.items.map(function renderFollowUpRow(row) {
                     return (
                       <TableRow
                         key={row.id}
@@ -230,6 +209,12 @@ function FollowUpDialog({ open, onOpenChange }) {
                   })}
                 </TableBody>
               </Table>
+              <DialogStatus
+                status={dialogState.status}
+                error={dialogState.error}
+                empty={!dialogState.data.items.length}
+                emptyText="暂无重点随访数据"
+              />
             </ScrollArea>
           </div>
         </div>
@@ -264,3 +249,23 @@ function FollowUpStatusTag({ statusText }) {
 }
 
 export default FollowUpDialog;
+
+function DialogStatus({ status, error, empty, emptyText }) {
+  if (status === "loading") {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">弹窗数据加载中...</div>;
+  }
+
+  if (status === "error") {
+    return (
+      <div className="py-8 text-center text-sm text-[#FF9CA2]">
+        {error?.message || "弹窗数据加载失败"}
+      </div>
+    );
+  }
+
+  if (empty) {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">{emptyText}</div>;
+  }
+
+  return null;
+}

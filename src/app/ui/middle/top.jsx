@@ -3,11 +3,28 @@ import DashboardCardIcon from "./components/dashboard-card-icon";
 import FollowUpDashboardCard from "./components/follow-up-dashboard-card";
 import TodayServiceDashboardCard from "./components/today-service-dashboard-card";
 
+function formatDashboardValue(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value.toLocaleString("zh-CN");
+  }
+
+  return value ?? "-";
+}
+
 // 顶部的 dashboard
-function TopDashboard() {
+function TopDashboard({ overviewCards, dashboardStatus, dashboardError }) {
+  const isLoading = dashboardStatus === "loading";
+  const isError = dashboardStatus === "error";
+  const realtimeWarningsCard = overviewCards?.realtimeWarnings || {};
+
   return (
     <div className="mb-3 flex gap-x-3">
-      <TodayServiceDashboardCard />
+      <TodayServiceDashboardCard
+        value={formatDashboardValue(overviewCards?.todayService?.value)}
+        meta={overviewCards?.todayService?.meta}
+        loading={isLoading}
+        error={isError}
+      />
       {/* --- */}
       <div
         className="flex-1 bd1 rounded-xl px-3 py-3.5 flex flex-col"
@@ -21,19 +38,51 @@ function TopDashboard() {
         </div>
         <div className="flex items-end justify-between">
           <span className="text-[#00E7FF] text-3xl leading-[24px] font-bold">
-            43
+            {isLoading
+              ? "..."
+              : isError
+                ? "-"
+                : formatDashboardValue(realtimeWarningsCard.value)}
           </span>
 
           <div className="flex items-center leading-none">
-            <span className="text-[#9FB5DA]/85 text-xs">较昨日</span>
-            <span className="text-[#FF4D4F]/95 text-xs">↓ 2.0%</span>
+            <span className="text-[#9FB5DA]/85 text-xs">
+              {realtimeWarningsCard.meta?.label || "较昨日"}
+            </span>
+            <span
+              className="text-xs"
+              style={{
+                color:
+                  realtimeWarningsCard.meta?.tone === "down"
+                    ? "#FF4D4F"
+                    : realtimeWarningsCard.meta?.tone === "up"
+                      ? "#28E38A"
+                      : "#E8F0FF",
+              }}>
+              {isLoading
+                ? "加载中"
+                : isError
+                  ? "加载失败"
+                  : realtimeWarningsCard.meta?.value || "-"}
+            </span>
           </div>
         </div>
       </div>
       {/* --- */}
-      <FollowUpDashboardCard />
+      <FollowUpDashboardCard
+        value={formatDashboardValue(overviewCards?.followUp?.value)}
+        valueSuffix={overviewCards?.followUp?.valueSuffix}
+        meta={overviewCards?.followUp?.meta}
+        loading={isLoading}
+        error={isError}
+      />
       {/* --- */}
-      <DeviceTotalDashboardCard />
+      <DeviceTotalDashboardCard
+        value={formatDashboardValue(overviewCards?.deviceTotal?.value)}
+        meta={overviewCards?.deviceTotal?.meta}
+        loading={isLoading}
+        error={isError}
+      />
     </div>
   );
 }

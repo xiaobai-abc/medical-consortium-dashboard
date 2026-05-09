@@ -8,7 +8,7 @@ import FollowUpDialog from "./follow-up-dialog";
 /**
  * 重点随访卡片负责管理弹窗开关，保持顶部面板入口文件轻量。
  */
-function FollowUpDashboardCard() {
+function FollowUpDashboardCard({ value, valueSuffix, meta, loading, error }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   function handleCardClick() {
@@ -34,16 +34,18 @@ function FollowUpDashboardCard() {
         </div>
         <div className="flex items-end justify-between">
           <h6 className="text-[#00E7FF] text-3xl leading-[24px] font-bold flex items-end">
-            <span>28</span>
+            <span>{loading ? "..." : error ? "-" : value}</span>
             <span className="text-xs text-[#9FB5DA]/90 leading-[16px] ml-1">
-              人
+              {valueSuffix || "人"}
             </span>
           </h6>
 
           <div className="flex items-center leading-none">
-            <span className="text-[#9FB5DA]/85 text-xs mr-2">完成率</span>
+            <span className="text-[#9FB5DA]/85 text-xs mr-2">
+              {meta?.label || "完成率"}
+            </span>
             <span className="text-white text-xs flex items-center justify-center rounded-[10px] px-2 py-0.5 border border-[#1D3B7A]/60">
-              77%
+              {loading ? "加载中" : error ? "加载失败" : meta?.value || "-"}
             </span>
           </div>
         </div>

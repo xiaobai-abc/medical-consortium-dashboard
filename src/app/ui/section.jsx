@@ -13,23 +13,44 @@ import TopDashboard from "./middle/top";
 /**
  * 主体负责组织三栏布局，并在页面中只挂载一次设备监控弹窗根组件。
  */
-function SectionBody() {
+function SectionBody({ dashboardStatus, dashboardError, dashboardView }) {
   return (
     <DeviceMonitorDialogProvider>
       <section className={cn("flex w-full overflow-hidden gap-x-3")}>
         {/* 圣杯布局 */}
         {/* 左 中 右 */}
         <div className="h-full flex flex-col w-[22%] min-w-[420px]">
-          <LeftL1 />
-          <LeftL2 />
+          <LeftL1
+            dashboardStatus={dashboardStatus}
+            dashboardError={dashboardError}
+            measurementStatistics={dashboardView.measurementStatistics}
+          />
+          <LeftL2
+            dashboardStatus={dashboardStatus}
+            dashboardError={dashboardError}
+            warningTrends={dashboardView.warningTrends}
+          />
         </div>
         <div className="flex-full w-full h-full flex flex-col">
-          <TopDashboard></TopDashboard>
+          <TopDashboard
+            dashboardStatus={dashboardStatus}
+            dashboardError={dashboardError}
+            overviewCards={dashboardView.top}
+          />
           <MainMap></MainMap>
         </div>
         <div className="h-full flex flex-col w-[22%] min-w-[420px]">
-          <RightR1></RightR1>
-          <RightR2 />
+          <RightR1
+            dashboardStatus={dashboardStatus}
+            dashboardError={dashboardError}
+            realtimeWarnings={dashboardView.realtimeWarnings}
+            deviceMonitoring={dashboardView.deviceMonitoring}
+          />
+          <RightR2
+            dashboardStatus={dashboardStatus}
+            dashboardError={dashboardError}
+            deviceMonitoring={dashboardView.deviceMonitoring}
+          />
         </div>
       </section>
     </DeviceMonitorDialogProvider>

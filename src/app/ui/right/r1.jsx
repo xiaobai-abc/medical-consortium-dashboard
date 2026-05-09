@@ -7,58 +7,21 @@ import { cn } from "../../../lib/utils";
 import { ScrollArea } from "@/shadcn/ui/scroll-area";
 import RightAlertDetailDialog from "./components/alert-detail-dialog";
 
-const ALERT_LIST = [
-  {
-    id: "alert-1",
-    metricName: "血氧",
-    metricValue: "93",
-    hospitalName: "仓前街道社区卫生服务中心",
-    warningTime: "08:32"
-  },
-  {
-    id: "alert-2",
-    metricName: "血糖",
-    metricValue: "12.6",
-    hospitalName: "良渚街道社区卫生服务中心",
-    warningTime: "08:28"
-  },
-  {
-    id: "alert-3",
-    metricName: "血压",
-    metricValue: "156/101",
-    hospitalName: "五常街道社区卫生服务中心",
-    warningTime: "08:21"
-  },
-  {
-    id: "alert-4",
-    metricName: "血氧",
-    metricValue: "91",
-    hospitalName: "闲林街道社区卫生服务中心",
-    warningTime: "08:17"
-  },
-  {
-    id: "alert-5",
-    metricName: "血糖",
-    metricValue: "13.2",
-    hospitalName: "仁和街道社区卫生服务中心",
-    warningTime: "08:13"
-  },
-  {
-    id: "alert-6",
-    metricName: "血压",
-    metricValue: "162/103",
-    hospitalName: "瓶窑街道社区卫生服务中心",
-    warningTime: "08:05"
-  }
-];
-
 /**
  * 右侧设备监控卡片，统一承接设备监控与异常预警交互。
  */
-function RightR1() {
+function RightR1({
+  realtimeWarnings,
+  deviceMonitoring,
+  dashboardStatus,
+  dashboardError,
+}) {
   const { openDeviceMonitorDialog } = useDeviceMonitorDialog();
   const [activeAlert, setActiveAlert] = useState(null);
   const [isAlertDetailOpen, setIsAlertDetailOpen] = useState(false);
+  const alertList = realtimeWarnings?.items || [];
+  const isLoading = dashboardStatus === "loading";
+  const isError = dashboardStatus === "error";
 
   /**
    * 打开异常预警详情弹窗，并记录当前点击项。
@@ -108,7 +71,13 @@ function RightR1() {
           <BlockTT
             id={1}
             title="在线设备"
-            value="1824"
+            value={
+              isLoading
+                ? "..."
+                : isError
+                  ? "-"
+                  : deviceMonitoring?.onlineCount?.toLocaleString("zh-CN") || "0"
+            }
             onClick={function handleOnlineClick() {
               openDeviceMonitorDialog("online", {
                 deviceStatus: "online"
@@ -118,7 +87,13 @@ function RightR1() {
           <BlockTT
             id={2}
             title="离线设备"
-            value="326"
+            value={
+              isLoading
+                ? "..."
+                : isError
+                  ? "-"
+                  : deviceMonitoring?.offlineCount?.toLocaleString("zh-CN") || "0"
+            }
             onClick={function handleOfflineClick() {
               openDeviceMonitorDialog("offline", {
                 deviceStatus: "offline"
@@ -128,19 +103,23 @@ function RightR1() {
         </div>
         <h3 className="text-sm text-[#9FB5DA] mb-2">异常数据实时预警</h3>
         <ScrollArea className="flex-1 h-0 -mr-1">
-          <div className="space-y-2.5 pr-1">
-            {ALERT_LIST.map(function renderAlertItem(alertItem) {
-              return (
-                <Item
-                  key={alertItem.id}
-                  alertItem={alertItem}
-                  onClick={function handleClick() {
-                    handleAlertItemClick(alertItem);
-                  }}
-                />
-              );
-            })}
-          </div>
+          {alertList.length > 0 ? (
+            <div className="space-y-2.5 pr-1">
+              {alertList.map(function renderAlertItem(alertItem) {
+                return (
+                  <Item
+                    key={alertItem.id}
+                    alertItem={alertItem}
+                    onClick={function handleClick() {
+                      handleAlertItemClick(alertItem);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <StatusPlaceholder status={dashboardStatus} error={dashboardError} />
+          )}
         </ScrollArea>
       </div>
       <RightAlertDetailDialog
@@ -152,6 +131,18 @@ function RightR1() {
   );
 }
 export default RightR1;
+
+function StatusPlaceholder({ status, error }) {
+  return (
+    <div className="flex h-full min-h-[180px] items-center justify-center rounded-2xl border border-dashed border-[#1E4B87]/50 text-sm text-[#9FB5DA]/85">
+      {status === "loading"
+        ? "预警数据加载中..."
+        : status === "error"
+          ? error?.message || "预警数据加载失败"
+          : "暂无实时预警数据"}
+    </div>
+  );
+}
 
 /**
  * 异常预警行项，点击后打开预警详情弹窗。

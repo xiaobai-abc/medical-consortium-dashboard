@@ -9,6 +9,14 @@ import {
   SelectValue
 } from "@/shadcn/ui/select";
 
+function getOptionValue(option) {
+  return typeof option === "string" ? option : String(option?.value ?? option?.label ?? "");
+}
+
+function getOptionLabel(option) {
+  return typeof option === "string" ? option : String(option?.label ?? option?.value ?? "");
+}
+
 /**
  * 表头下拉筛选直接充当列名使用。
  * 这里只提供统一视觉和交互壳子，具体选项仍由业务弹窗各自维护。
@@ -31,10 +39,10 @@ function DialogHeaderSelect({
           {options.map(function renderOption(option) {
             return (
               <SelectItem
-                key={option}
-                value={option}
+                key={getOptionValue(option)}
+                value={getOptionValue(option)}
                 className="rounded-[8px] text-xs focus:bg-[#1D3B7A]/50 focus:text-white">
-                {option}
+                {getOptionLabel(option)}
               </SelectItem>
             );
           })}

@@ -1,11 +1,14 @@
-import { AUTH_TOKEN_STORAGE_KEY } from "./config";
+import { AUTH_TOKEN_STORAGE_KEY, getConfiguredAccessToken } from "./config";
 
 export function getAccessToken() {
   if (typeof window === "undefined") {
-    return "";
+    return getConfiguredAccessToken();
   }
 
-  return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
+  return (
+    window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) ||
+    getConfiguredAccessToken()
+  );
 }
 
 export function setAccessToken(tokenValue) {

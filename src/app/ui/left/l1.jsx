@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { getMeasurementPopup } from "@/api";
 import ScreenProgress from "@/app/components/screen-progress";
+import { normalizeMeasurementPopup } from "@/app/modules/popup-view-model";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shadcn/ui/button";
 import {
@@ -13,78 +15,11 @@ import {
 } from "@/shadcn/ui/dialog";
 import { ScrollArea } from "@/shadcn/ui/scroll-area";
 
-const measurementItems = [
-  {
-    title: "血压",
-    value: 12426,
-    colors: ["#59c2dd", "#55b8d8", "#476fb4"]
-  },
-  {
-    title: "血糖",
-    value: 8273,
-    colors: ["#776cdb", "#55b8d8", "#476fb4"]
-  },
-  {
-    title: "心率",
-    value: 6958,
-    colors: ["#59c2dd", "#55b8d8", "#476fb4"]
-  },
-  {
-    title: "总胆固醇",
-    value: 5261,
-    colors: ["#776cdb", "#55b8d8", "#4470b1"]
-  },
-  {
-    title: "尿酸",
-    value: 4213,
-    colors: ["#59c2dd", "#55b8d8", "#4470b1"]
-  },
-  {
-    title: "甘油三酯",
-    value: 2931,
-    colors: ["#59c2dd", "#5dc18c", "#3e8a9f"]
-  },
-  {
-    title: "低密度脂蛋白",
-    value: 2603,
-    colors: ["#776cdb", "#55b8d8", "#4470b1"]
-  },
-  {
-    title: "高密度脂蛋白",
-    value: 2064,
-    colors: ["#59c2dd", "#5dc18c", "#3e8a9f"]
-  },
-  {
-    title: "血红蛋白",
-    value: 1948,
-    colors: ["#59c2dd", "#55b8d8", "#4470b1"]
-  },
-  {
-    title: "肌酐",
-    value: 1837,
-    colors: ["#776cdb", "#55b8d8", "#4470b1"]
-  },
-  {
-    title: "血酮",
-    value: 1258,
-    colors: ["#59c2dd", "#5dc18c", "#3e8a9f"]
-  },
-  {
-    title: "乳酸",
-    value: 3125,
-    colors: ["#776cdb", "#55b8d8", "#4470b1"]
-  }
-];
-
-const maxMeasurementValue = measurementItems.reduce(function getMaxValue(
-  currentMaxValue,
-  currentItem
-) {
-  return Math.max(currentMaxValue, currentItem.value);
-}, 0);
-
-function LeftL1() {
+function LeftL1({ measurementStatistics, dashboardStatus, dashboardError }) {
   const [activeMeasurementItem, setActiveMeasurementItem] = useState(null);
+  const measurementItems = measurementStatistics?.items || [];
+  const isLoading = dashboardStatus === "loading";
+  const isError = dashboardStatus === "error";
 
   return (
     <div
@@ -104,37 +39,45 @@ function LeftL1() {
       </div>
       <div className="flex-1 h-0 mb-4">
         <ScrollArea className={cn("h-full")}>
-          <div className="pr-2">
-            {measurementItems.map(function renderMeasurementItem(item, index) {
-              return (
-                <ProgressBlock
-                  key={`${item.title}-${item.value}`}
-                  title={item.title}
-                  value={item.value}
-                  progress={Math.round(
-                    (item.value / maxMeasurementValue) * 100
-                  )}
-                  colors={item.colors}
-                  className={index === 0 ? "" : "pt-4"}
-                  onClick={function handleClick() {
-                    setActiveMeasurementItem(item);
-                  }}
-                />
-              );
-            })}
-          </div>
+          {measurementItems.length > 0 ? (
+            <div className="pr-2">
+              {measurementItems.map(function renderMeasurementItem(item, index) {
+                return (
+                  <ProgressBlock
+                    key={`${item.title}-${item.value}`}
+                    title={item.title}
+                    value={item.value}
+                    progress={item.progress}
+                    colors={item.colors}
+                    className={index === 0 ? "" : "pt-4"}
+                    onClick={function handleClick() {
+                      setActiveMeasurementItem(item);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <StatusPlaceholder status={dashboardStatus} error={dashboardError} />
+          )}
         </ScrollArea>
       </div>
       <div className="flex items-center">
         <div className=" rounded-[50px] bd1 border-[#00E7FF]/35 px-5 py-2 flex-1">
           <h5 className="text-[#9FB5DA] text-xs mb-1">总测量次数</h5>
           <span className="text-[22px] text-[#00E7FF] leading-none">
-            49,772
+            {isLoading
+              ? "..."
+              : isError
+                ? "-"
+                : (measurementStatistics?.totalMeasurements || 0).toLocaleString("zh-CN")}
           </span>
         </div>
         <div className=" rounded-[50px] bd1 border-[#00E7FF]/35 flex-1 ml-4 px-5 py-2">
           <h5 className="text-[#9FB5DA] text-xs mb-1">异常数据占比</h5>
-          <span className="text-[22px] text-[#986df7] leading-none">13.7%</span>
+          <span className="text-[22px] text-[#986df7] leading-none">
+            {isLoading ? "..." : isError ? "-" : measurementStatistics?.abnormalRatio || "-"}
+          </span>
         </div>
       </div>
       <MeasurementDialog
@@ -184,6 +127,73 @@ function ProgressBlock({ title, value, progress, colors, className, onClick }) {
  * 详情弹窗使用右侧卡片同款壳子，内容区留空供后续补充。
  */
 function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
+  const [dialogState, setDialogState] = useState({
+    status: "idle",
+    data: {
+      totalMeasurements: 0,
+      abnormalCount: 0,
+      normalRatio: 0,
+      abnormalRatio: 0,
+      normalCount: 0,
+      comparisonItems: [],
+    },
+    error: null,
+  });
+
+  useEffect(
+    function requestMeasurementPopup() {
+      if (!activeMeasurementItem) {
+        return;
+      }
+
+      let disposed = false;
+
+      setDialogState(function setLoadingState(previousState) {
+        return {
+          ...previousState,
+          status: "loading",
+          error: null,
+        };
+      });
+
+      getMeasurementPopup({
+        metric: activeMeasurementItem.metricKey || activeMeasurementItem.title,
+      })
+        .then(function handleSuccess(responseData) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState({
+            status: "success",
+            data: normalizeMeasurementPopup(responseData),
+            error: null,
+          });
+        })
+        .catch(function handleError(error) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState(function setErrorState(previousState) {
+            return {
+              ...previousState,
+              status: "error",
+              error,
+            };
+          });
+        });
+
+      return function cleanupMeasurementPopupRequest() {
+        disposed = true;
+      };
+    },
+    [activeMeasurementItem]
+  );
+
+  const normalRatioPercent = `${Math.round((dialogState.data.normalRatio || 0) * 100)}%`;
+  const abnormalRatioPercent = `${Math.round((dialogState.data.abnormalRatio || 0) * 100)}%`;
+
   return (
     <Dialog open={Boolean(activeMeasurementItem)} onOpenChange={onOpenChange}>
       <DialogContent
@@ -215,71 +225,107 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
               </DialogClose>
             </div>
           </div>
-          <div className="flex gap-x-3">
-            <div className="px-3 py-3.5 bg-[rgba(29,59,122,0.3)] flex-1">
-              <h6 className="text-[#9fb5da] mb-2">总测量次数</h6>
-              <span className="text-[rgba(232,240,255,0.95)] text-[20px] leading-none">
-                49,772
-              </span>
+            <div className="flex gap-x-3">
+              <div className="px-3 py-3.5 bg-[rgba(29,59,122,0.3)] flex-1">
+                <h6 className="text-[#9fb5da] mb-2">总测量次数</h6>
+                <span className="text-[rgba(232,240,255,0.95)] text-[20px] leading-none">
+                  {dialogState.status === "loading"
+                    ? "..."
+                    : dialogState.status === "error"
+                      ? "-"
+                      : dialogState.data.totalMeasurements.toLocaleString("zh-CN")}
+                </span>
+              </div>
+              <div className="px-3 py-3.5 bg-[rgba(29,59,122,0.3)] flex-1">
+                <h6 className="text-[#9fb5da] mb-2">异常数据</h6>
+                <span className="text-[rgba(255,77,79,0.95)] text-[20px] leading-none">
+                  {dialogState.status === "loading"
+                    ? "..."
+                    : dialogState.status === "error"
+                      ? "-"
+                      : dialogState.data.abnormalCount.toLocaleString("zh-CN")}
+                </span>
+              </div>
             </div>
-            <div className="px-3 py-3.5 bg-[rgba(29,59,122,0.3)] flex-1">
-              <h6 className="text-[#9fb5da] mb-2">异常数据</h6>
-              <span className="text-[rgba(255,77,79,0.95)] text-[20px] leading-none">
-                286
-              </span>
-            </div>
-          </div>
           <h2 className="text-base text-white font-bold my-3">
             测量值与异常值占比
           </h2>
-          <div className="bg-[rgba(29,59,122,0.2)] p-3">
-            <div className="flex items-center">
-              <span className="w-20 ">正常值:</span>
-              <div className="flex-1 h-6 rounded-[5px] relative overflow-hidden">
-                <div className="bg-[rgba(0,231,255,0.6)] h-full w-[87%]"></div>
-                <span className=" absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-[#E8F0FF] leading-none">
-                  87%
+            <div className="bg-[rgba(29,59,122,0.2)] p-3">
+              <div className="flex items-center">
+                <span className="w-20 ">正常值:</span>
+                <div className="flex-1 h-6 rounded-[5px] relative overflow-hidden">
+                  <div
+                    className="bg-[rgba(0,231,255,0.6)] h-full"
+                    style={{ width: normalRatioPercent }}></div>
+                  <span className=" absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-[#E8F0FF] leading-none">
+                    {dialogState.status === "loading"
+                      ? "..."
+                      : dialogState.status === "error"
+                        ? "-"
+                        : normalRatioPercent}
+                  </span>
+                </div>
+                <span className="text-ms text-[rgba(232,240,255,0.88)] leading-none ml-2">
+                  {dialogState.status === "loading"
+                    ? "..."
+                    : dialogState.status === "error"
+                      ? "-"
+                      : `${dialogState.data.normalCount.toLocaleString("zh-CN")}次`}
                 </span>
               </div>
-              <span className="text-ms text-[rgba(232,240,255,0.88)] leading-none ml-2">
-                1910次
-              </span>
-            </div>
-            <div className="flex items-center mt-2">
-              <span className="w-20 ">异常值:</span>
-              <div className="flex-1 h-6 rounded-[5px] relative overflow-hidden">
-                <div className="bg-[#ad4b52] h-full w-[13%]"></div>
-                <span className=" absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-[#E8F0FF] leading-none">
-                  13%
+              <div className="flex items-center mt-2">
+                <span className="w-20 ">异常值:</span>
+                <div className="flex-1 h-6 rounded-[5px] relative overflow-hidden">
+                  <div
+                    className="bg-[#ad4b52] h-full"
+                    style={{ width: abnormalRatioPercent }}></div>
+                  <span className=" absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-[#E8F0FF] leading-none">
+                    {dialogState.status === "loading"
+                      ? "..."
+                      : dialogState.status === "error"
+                        ? "-"
+                        : abnormalRatioPercent}
+                  </span>
+                </div>
+                <span className="text-ms text-[rgba(232,240,255,0.88)] leading-none ml-2">
+                  {dialogState.status === "loading"
+                    ? "..."
+                    : dialogState.status === "error"
+                      ? "-"
+                      : `${dialogState.data.abnormalCount.toLocaleString("zh-CN")}次`}
                 </span>
               </div>
-              <span className="text-ms text-[rgba(232,240,255,0.88)] leading-none ml-2">
-                1910次
-              </span>
             </div>
-          </div>
           <h2 className="text-base text-white font-bold my-3">所有指标对比</h2>
           {/* <ScrollArea className={cn("h-[520px] ")}></ScrollArea> */}
           <div className=" space-y-2">
-            {measurementItems.map((item) => {
+            {dialogState.data.comparisonItems.map((item) => {
               return (
                 <div
-                  key={item.title}
+                  key={item.id}
                   className={cn(
                     "p-3 bg-[rgba(29,59,122,0.2)] hover:bg-[rgba(29,59,122,0.4)] transition-colors duration-300",
                     "rounded-[3px] flex items-center justify-between"
                   )}>
                   <span className=" leading-none text-sm text-[#e8f0ff] ">
-                    {item.title}
+                    {item.name}
                   </span>
                   <span className="leading-none text-sm text-[rgba(159,181,218,0.9)] ">
-                    <span className="mr-1">测量: 8530 </span>
-                    异常: 1280(15.0%)
+                    <span className="mr-1">
+                      测量: {item.measurementCount.toLocaleString("zh-CN")}
+                    </span>
+                    异常: {item.abnormalCount.toLocaleString("zh-CN")}
                   </span>
                 </div>
               );
             })}
           </div>
+          <DialogStatus
+            status={dialogState.status}
+            error={dialogState.error}
+            empty={!dialogState.data.comparisonItems.length}
+            emptyText="暂无检测项目明细数据"
+          />
         </div>
       </DialogContent>
     </Dialog>
@@ -287,3 +333,35 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
 }
 
 export default LeftL1;
+
+function StatusPlaceholder({ status, error }) {
+  return (
+    <div className="flex h-full min-h-[180px] items-center justify-center rounded-2xl border border-dashed border-[#1E4B87]/50 text-sm text-[#9FB5DA]/85">
+      {status === "loading"
+        ? "检测统计加载中..."
+        : status === "error"
+          ? error?.message || "检测统计加载失败"
+          : "暂无检测统计数据"}
+    </div>
+  );
+}
+
+function DialogStatus({ status, error, empty, emptyText }) {
+  if (status === "loading") {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">弹窗数据加载中...</div>;
+  }
+
+  if (status === "error") {
+    return (
+      <div className="py-8 text-center text-sm text-[#FF9CA2]">
+        {error?.message || "弹窗数据加载失败"}
+      </div>
+    );
+  }
+
+  if (empty) {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">{emptyText}</div>;
+  }
+
+  return null;
+}
