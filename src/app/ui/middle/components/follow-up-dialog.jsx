@@ -20,19 +20,19 @@ import { normalizeFollowUpPopup } from "@/app/modules/popup-view-model";
 import DialogCloseAction from "./dialog-close-action";
 import DialogHeaderSelect from "./dialog-header-select";
 
-const defaultCenterOptions = [{ label: "全部卫生中心", value: "" }];
-const defaultMetricOptions = [{ label: "全部项目", value: "" }];
-const defaultStatusOptions = [{ label: "是否已随访", value: "" }];
+const defaultCenterOptions = [{ label: "全部卫生中心", value: "全部卫生中心" }];
+const defaultMetricOptions = [{ label: "全部项目", value: "全部项目" }];
+const defaultStatusOptions = [{ label: "是否已随访", value: "是否已随访" }];
 
 /**
  * 重点随访弹窗本身只处理筛选状态与表格渲染。
  * 卡片入口和具体展示结构保持分离，后续更换字段时影响面更小。
  */
 function FollowUpDialog({ open, onOpenChange }) {
-  const [selectedCenter, setSelectedCenter] = useState("");
+  const [selectedCenter, setSelectedCenter] = useState(defaultCenterOptions[0].value);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [selectedMetric, setSelectedMetric] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedMetric, setSelectedMetric] = useState(defaultMetricOptions[0].value);
+  const [selectedStatus, setSelectedStatus] = useState(defaultStatusOptions[0].value);
   const [dialogState, setDialogState] = useState({
     status: "idle",
     data: {
@@ -77,10 +77,17 @@ function FollowUpDialog({ open, onOpenChange }) {
       });
 
       getFollowUpPopup({
-        service_center: selectedCenter || undefined,
+        service_center:
+          selectedCenter === defaultCenterOptions[0].value ? undefined : selectedCenter,
         keyword: searchKeyword.trim() || undefined,
-        metric: selectedMetric || undefined,
-        follow_up_status: selectedStatus || undefined,
+        metric:
+          selectedMetric === defaultMetricOptions[0].value
+            ? undefined
+            : selectedMetric,
+        follow_up_status:
+          selectedStatus === defaultStatusOptions[0].value
+            ? undefined
+            : selectedStatus,
       })
         .then(function handleSuccess(responseData) {
           if (disposed) {

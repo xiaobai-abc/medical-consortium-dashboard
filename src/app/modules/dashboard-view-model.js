@@ -1,3 +1,15 @@
+/**
+ * dashboard-view-model 只处理首页主聚合接口的数据整理。
+ *
+ * 结构规划约定：
+ * - src/api/dashboard*.js: 只负责请求
+ * - src/app/modules/dashboard-view-model.js: 只负责首页主接口字段整理
+ * - src/app/modules/popup-view-model.js: 只负责各弹窗接口字段整理
+ * - src/app/ui/*: 只负责组件渲染和交互
+ *
+ * 这样后面无论是首页主聚合，还是 popup 继续新增字段，
+ * 都可以在“请求层 / 映射层 / 视图层”三层里各改各的，不会互相污染。
+ */
 const measurementColorPalette = [
   ["#59c2dd", "#55b8d8", "#476fb4"],
   ["#776cdb", "#55b8d8", "#476fb4"],
@@ -284,6 +296,7 @@ function buildMeasurementStatistics(measurementStatistics) {
 
   const items = normalizedItemsSource.map(function mapItem(item, index) {
     return {
+      metricKey: pickFirst(item, ["metric_key", "key"], ""),
       title: pickFirst(item, ["title", "label", "name", "metric_label"], `项目 ${index + 1}`),
       value:
         toNumber(pickFirst(item, ["value", "count", "total", "measurement_count"])) || 0,
@@ -526,5 +539,6 @@ export function buildHomeDashboardView(dashboardData) {
     warningTrends: buildWarningTrends(dashboardData?.warning_trends),
     realtimeWarnings,
     deviceMonitoring,
+    mapDistribution: dashboardData?.map_distribution || null,
   };
 }

@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+import { getDeviceDetailPopup } from "@/api";
+import { normalizeDeviceDetail } from "@/app/modules/popup-view-model";
 import { Button } from "@/shadcn/ui/button";
 import {
   Dialog,
@@ -14,14 +18,64 @@ import DeviceMonitorHistoryLineChart from "./history-line-chart";
  */
 function DeviceMonitorDetailDialog({ open, onOpenChange, deviceDetail }) {
   const safeDeviceDetail = deviceDetail || {};
+  const [dialogState, setDialogState] = useState({
+    status: "idle",
+    data: null,
+    error: null,
+  });
   const detailTitle =
     safeDeviceDetail.deviceCode
       ? `设备详情 ${safeDeviceDetail.deviceCode}`
       : "设备详情";
-  const historyDates =
-    safeDeviceDetail.historyDates ? safeDeviceDetail.historyDates : [];
-  const historyValues =
-    safeDeviceDetail.historyValues ? safeDeviceDetail.historyValues : [];
+
+  useEffect(
+    function requestDeviceDetailPopup() {
+      if (!open || !safeDeviceDetail.deviceCode) {
+        return;
+      }
+
+      let disposed = false;
+
+      setDialogState({
+        status: "loading",
+        data: null,
+        error: null,
+      });
+
+      getDeviceDetailPopup(safeDeviceDetail.deviceCode)
+        .then(function handleSuccess(responseData) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState({
+            status: "success",
+            data: normalizeDeviceDetail(responseData),
+            error: null,
+          });
+        })
+        .catch(function handleError(error) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState({
+            status: "error",
+            data: null,
+            error,
+          });
+        });
+
+      return function cleanupDeviceDetailPopupRequest() {
+        disposed = true;
+      };
+    },
+    [open, safeDeviceDetail.deviceCode]
+  );
+
+  const detailData = dialogState.data || safeDeviceDetail;
+  const historyDates = detailData.historyDates || [];
+  const historyValues = detailData.historyValues || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -56,43 +110,38 @@ function DeviceMonitorDetailDialog({ open, onOpenChange, deviceDetail }) {
             <div className=" grid grid-cols-[1.1fr_1fr] gap-3.5 mb-3">
               <Card title="设备信息">
                 <div className="mt-2 space-y-2.5">
-                  <PItem l="设备编号" c={safeDeviceDetail.deviceCode}></PItem>
-                  <PItem l="设备类型" c={safeDeviceDetail.deviceType}></PItem>
+                  <PItem l="设备编号" c={detailData.deviceCode}></PItem>
+                  <PItem l="设备类型" c={detailData.deviceType}></PItem>
                   <PItem
                     l="设备状态"
                     c={
-                      <span className="text-red-400">
-                        {safeDeviceDetail.statusText}
+                      <span style={{ color: detailData.statusColor || "#F87171" }}>
+                        {detailData.statusText}
                       </span>
                     }></PItem>
-                  {/* <PItem l="检测项目" c={safeDeviceDetail.metricName}></PItem> */}
                   <PItem
-                    l="最后更新"
-                    c={safeDeviceDetail.lastUpdateTime}></PItem>
+                    l="检测项目"
+                    c={detailData.metricName}></PItem>
+                  <PItem l="最后更新" c={detailData.lastUpdateTime}></PItem>
                 </div>
               </Card>
               <Card title="患者信息">
                 <div className="mt-2 space-y-2.5">
-                  <PItem l="患者姓名" c={safeDeviceDetail.patientName}></PItem>
-                  <PItem l="性别" c={safeDeviceDetail.gender}></PItem>
-                  <PItem l="年龄" c={safeDeviceDetail.age}></PItem>
-                  <PItem l="联系电话" c={safeDeviceDetail.phone}></PItem>
+                  <PItem l="患者姓名" c={detailData.patientName}></PItem>
+                  <PItem l="性别" c={detailData.gender}></PItem>
+                  <PItem l="年龄" c={detailData.age}></PItem>
+                  <PItem l="联系电话" c={detailData.phone}></PItem>
                 </div>
               </Card>
               <Card title="医生信息">
                 <div className="mt-2 space-y-2.5">
-                  <PItem l="医生姓名" c={safeDeviceDetail.doctorName}></PItem>
-                  <PItem l="联系电话" c={safeDeviceDetail.doctorPhone}></PItem>
-                  {/* <PItem
-                    l="最近随访"
-                    c={safeDeviceDetail.lastFollowUpTime}></PItem> */}
+                  <PItem l="医生姓名" c={detailData.doctorName}></PItem>
+                  <PItem l="联系电话" c={detailData.doctorPhone}></PItem>
                 </div>
               </Card>
               <Card title="所属医院">
                 <div className="mt-2 space-y-2.5">
-                  <PItem l="医院名称" c={safeDeviceDetail.hospitalName}></PItem>
-                  {/* <PItem l="所属科室" c={safeDeviceDetail.departmentName}></PItem>
-                  <PItem l="安装位置" c={safeDeviceDetail.installLocation}></PItem> */}
+                  <PItem l="医院名称" c={detailData.hospitalName}></PItem>
                 </div>
               </Card>
             </div>
@@ -104,6 +153,12 @@ function DeviceMonitorDetailDialog({ open, onOpenChange, deviceDetail }) {
                   className="h-full w-full"></DeviceMonitorHistoryLineChart>
               </div>
             </Card>
+            <DialogStatus
+              status={dialogState.status}
+              error={dialogState.error}
+              empty={dialogState.status === "success" && !dialogState.data}
+              emptyText="暂无设备详情数据"
+            />
           </div>
         </div>
       </DialogContent>
@@ -131,4 +186,24 @@ function PItem({ l, c }) {
       </p>
     </div>
   );
+}
+
+function DialogStatus({ status, error, empty, emptyText }) {
+  if (status === "loading") {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">弹窗数据加载中...</div>;
+  }
+
+  if (status === "error") {
+    return (
+      <div className="py-8 text-center text-sm text-[#FF9CA2]">
+        {error?.message || "弹窗数据加载失败"}
+      </div>
+    );
+  }
+
+  if (empty) {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">{emptyText}</div>;
+  }
+
+  return null;
 }

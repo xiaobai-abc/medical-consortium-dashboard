@@ -9,10 +9,14 @@ import {
   SelectValue
 } from "@/shadcn/ui/select";
 
-const defaultDeviceOptions = [{ label: "筛选设备", value: "" }];
+const defaultDeviceOptions = [{ label: "筛选设备", value: "筛选设备" }];
 
 function getOptionValue(option) {
-  return typeof option === "string" ? option : String(option?.value ?? option?.label ?? "");
+  if (typeof option === "string") {
+    return option;
+  }
+
+  return String(option?.value || option?.label || "");
 }
 
 function getOptionLabel(option) {

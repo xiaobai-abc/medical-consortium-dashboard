@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { getDeviceListPopup } from "@/api";
+import { normalizeDeviceListPopup } from "@/app/modules/popup-view-model";
 import { Button } from "@/shadcn/ui/button";
 import {
   Dialog,
@@ -34,46 +36,28 @@ const deviceSummaryColumns = [
   ]
 ];
 
-const deviceList = [
-  {
-    deviceCode: "DEV-100000",
-    statusText: "离线",
-    statusColor: "#FF4D4F",
-    deviceType: "血糖尿酸分析仪 GUE-101",
-    metricName: "血糖、尿酸",
-    hospitalName: "仓前街道社区卫生服务中心",
-    departmentName: "慢病管理科",
-    installLocation: "2 号楼 3 层随访室",
-    patientName: "张敏",
-    gender: "女",
-    age: "56 岁",
-    phone: "138****5621",
-    doctorName: "李医生",
-    doctorPhone: "139****2088",
-    lastUpdateTime: "2026-04-16 09:12",
-    lastFollowUpTime: "2026-04-15 16:30",
-    historyDates: [
-      "04-10",
-      "04-11",
-      "04-12",
-      "04-13",
-      "04-14",
-      "04-15",
-      "04-16"
-    ],
-    historyValues: [6.8, 7.1, 6.5, 7.4, 7.0, 6.7, 7.3]
-  }
-];
-
 /**
  * 设备监控弹窗根组件在页面中只挂载一次，所有入口共享这一份实例。
  */
 function DeviceMonitorDialogRoot() {
   const [activeDeviceDetail, setActiveDeviceDetail] = useState(null);
+  const [selectedDeviceType, setSelectedDeviceType] = useState("筛选设备");
+  const [dialogState, setDialogState] = useState({
+    status: "idle",
+    data: {
+      title: dialogTitleMap.all,
+      deviceOptions: [{ label: "筛选设备", value: "" }],
+      items: [],
+    },
+    error: null,
+  });
   const { isOpen, dialogType, dialogPayload, closeDeviceMonitorDialog } =
     useDeviceMonitorDialog();
   const dialogTitle =
-    dialogPayload?.title || dialogTitleMap[dialogType] || dialogTitleMap.all;
+    dialogState.data.title ||
+    dialogPayload?.title ||
+    dialogTitleMap[dialogType] ||
+    dialogTitleMap.all;
   const detailDialogOpen = Boolean(activeDeviceDetail);
 
   function clearActiveDeviceDetail() {
@@ -101,6 +85,72 @@ function DeviceMonitorDialogRoot() {
     setActiveDeviceDetail(deviceItem);
   }
 
+  useEffect(
+    function requestDeviceListPopup() {
+      if (!isOpen) {
+        return;
+      }
+
+      let disposed = false;
+
+      setDialogState(function setLoadingState(previousState) {
+        return {
+          ...previousState,
+          status: "loading",
+          error: null,
+        };
+      });
+
+      getDeviceListPopup({
+        dialog_type: dialogType,
+        device_status: dialogPayload?.deviceStatus,
+        hospital_name: dialogPayload?.hospitalName,
+        device_type: selectedDeviceType === "筛选设备" ? undefined : selectedDeviceType,
+      })
+        .then(function handleSuccess(responseData) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState({
+            status: "success",
+            data: normalizeDeviceListPopup(
+              responseData,
+              dialogPayload?.title || dialogTitleMap[dialogType] || dialogTitleMap.all
+            ),
+            error: null,
+          });
+        })
+        .catch(function handleError(error) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState(function setErrorState(previousState) {
+            return {
+              ...previousState,
+              status: "error",
+              error,
+            };
+          });
+        });
+
+      return function cleanupDeviceListPopupRequest() {
+        disposed = true;
+      };
+    },
+    [dialogPayload?.deviceStatus, dialogPayload?.hospitalName, dialogPayload?.title, dialogType, isOpen, selectedDeviceType]
+  );
+
+  useEffect(
+    function resetDeviceFilterWhenDialogChanges() {
+      if (!isOpen) {
+        setSelectedDeviceType("筛选设备");
+      }
+    },
+    [isOpen]
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent
@@ -117,7 +167,11 @@ function DeviceMonitorDialogRoot() {
               {dialogTitle}
             </DialogTitle>
             <div className="ml-auto mr-0">
-              <DeviceMonitorFilterSelect />
+              <DeviceMonitorFilterSelect
+                value={selectedDeviceType}
+                options={dialogState.data.deviceOptions}
+                onValueChange={setSelectedDeviceType}
+              />
             </div>
             <div className="pl-3">
               <DialogClose
@@ -135,7 +189,7 @@ function DeviceMonitorDialogRoot() {
           <hr className="text-[#1D3B7A]/35 my-3" />
           <ScrollArea className="min-h-[460px]">
             <div>
-              {deviceList.map(function renderDeviceCard(deviceItem) {
+              {dialogState.data.items.map(function renderDeviceCard(deviceItem) {
                 return (
                   <DeviceCard
                     key={deviceItem.deviceCode}
@@ -145,6 +199,12 @@ function DeviceMonitorDialogRoot() {
                 );
               })}
             </div>
+            <DialogStatus
+              status={dialogState.status}
+              error={dialogState.error}
+              empty={!dialogState.data.items.length}
+              emptyText="暂无设备列表数据"
+            />
           </ScrollArea>
         </div>
       </DialogContent>
@@ -214,4 +274,24 @@ function ItemLab({ label, content }) {
       <span className="text-sm text-[#E8F0FF]/90 ml-2">{content}</span>
     </div>
   );
+}
+
+function DialogStatus({ status, error, empty, emptyText }) {
+  if (status === "loading") {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">弹窗数据加载中...</div>;
+  }
+
+  if (status === "error") {
+    return (
+      <div className="py-8 text-center text-sm text-[#FF9CA2]">
+        {error?.message || "弹窗数据加载失败"}
+      </div>
+    );
+  }
+
+  if (empty) {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">{emptyText}</div>;
+  }
+
+  return null;
 }

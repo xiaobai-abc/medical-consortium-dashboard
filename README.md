@@ -13,21 +13,17 @@ bun run dev
 
 ## 环境变量
 
-当前项目直接使用根目录 `.env` 或 `.env.local`。
+当前项目只保留根目录 `.env.local` 作为本地运行配置。
 
 当前初始化的核心变量包括：
 
 - `NEXT_PUBLIC_APP_NAME`：应用名称
-- `NEXT_PUBLIC_APP_SHORT_NAME`：大屏简称
-- `NEXT_PUBLIC_APP_ENV`：当前环境标识
 - `NEXT_PUBLIC_API_BASE_URL`：前端请求接口地址
-- `SERVER_API_BASE_URL`：服务端接口地址
-- `NEXT_PUBLIC_AMAP_KEY`：高德地图 Key
+- `NEXT_PUBLIC_API_ACCESS_TOKEN`：接口 token
+- `NEXT_PUBLIC_API_AUTH_HEADER_NAME`：鉴权头名称，例如 `X-Api-Token`
+- `NEXT_PUBLIC_API_AUTH_SCHEME`：鉴权前缀；如果不需要 `Bearer`，保持空字符串
 - `NEXT_PUBLIC_WEATHER_TEXT`：顶部天气文案
 - `NEXT_PUBLIC_WEATHER_TEMPERATURE`：顶部温度文案
-- `NEXT_PUBLIC_SCREEN_BASE_WIDTH`：大屏设计基线宽度
-- `NEXT_PUBLIC_SCREEN_BASE_HEIGHT`：大屏设计基线高度
-- `NEXT_PUBLIC_USE_MOCK`：是否启用 mock
 
 页面和服务端组件读取环境变量时，直接使用 `process.env`，不额外封装环境读取层。
 

@@ -10,7 +10,11 @@ import {
 } from "@/shadcn/ui/select";
 
 function getOptionValue(option) {
-  return typeof option === "string" ? option : String(option?.value ?? option?.label ?? "");
+  if (typeof option === "string") {
+    return option;
+  }
+
+  return String(option?.value || option?.label || "");
 }
 
 function getOptionLabel(option) {

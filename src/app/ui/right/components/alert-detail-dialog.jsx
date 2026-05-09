@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+import { getWarningDetailPopup } from "@/api";
+import { normalizeWarningDetail } from "@/app/modules/popup-view-model";
 import { Button } from "@/shadcn/ui/button";
 import {
   Dialog,
@@ -7,6 +11,7 @@ import {
   DialogContent,
   DialogTitle
 } from "@/shadcn/ui/dialog";
+import DeviceMonitorHistoryLineChart from "../../components/device-monitor-dialog/history-line-chart";
 
 /**
  * 异常预警详情弹窗复用现有大屏弹窗壳子，内容区暂时留空。
@@ -16,6 +21,58 @@ function RightAlertDetailDialog({ open, onOpenChange, alertDetail }) {
   const detailTitle = safeAlertDetail.metricName
     ? `${safeAlertDetail.metricName}异常预警`
     : "异常预警详情";
+  const [dialogState, setDialogState] = useState({
+    status: "idle",
+    data: null,
+    error: null,
+  });
+
+  useEffect(
+    function requestWarningDetailPopup() {
+      if (!open || !safeAlertDetail.id) {
+        return;
+      }
+
+      let disposed = false;
+
+      setDialogState({
+        status: "loading",
+        data: null,
+        error: null,
+      });
+
+      getWarningDetailPopup(safeAlertDetail.id)
+        .then(function handleSuccess(responseData) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState({
+            status: "success",
+            data: normalizeWarningDetail(responseData),
+            error: null,
+          });
+        })
+        .catch(function handleError(error) {
+          if (disposed) {
+            return;
+          }
+
+          setDialogState({
+            status: "error",
+            data: null,
+            error,
+          });
+        });
+
+      return function cleanupWarningDetailPopupRequest() {
+        disposed = true;
+      };
+    },
+    [open, safeAlertDetail.id]
+  );
+
+  const detailData = dialogState.data || {};
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,37 +106,62 @@ function RightAlertDetailDialog({ open, onOpenChange, alertDetail }) {
           <div className="min-h-[460px]">
             <div className="flex gap-x-3">
               <Card title="预警级别">
-                <h2 className="text-lg font-bold text-[#FFCC66] leading-none">
-                  告警
+                <h2
+                  className="text-lg font-bold leading-none"
+                  style={{
+                    color: detailData.warningLevelColor || "#FFCC66",
+                  }}>
+                  {dialogState.status === "loading"
+                    ? "..."
+                    : dialogState.status === "error"
+                      ? "-"
+                      : detailData.warningLevel || "-"}
                 </h2>
-                {/* <h2 className="text-[18px] font-bold text-[#FF4D4F]">告警</h2> */}
               </Card>
               <Card title="发生事件">
                 <span className="text-xl text-[#E8F0FF]/95 font-bold leading-none">
-                  07:75
+                  {dialogState.status === "loading"
+                    ? "..."
+                    : dialogState.status === "error"
+                      ? "-"
+                      : detailData.occurredAt || "-"}
                 </span>
               </Card>
-            </div>{" "}
+            </div>
             <div className="bg-[#1D3B7A]/35 rounded-[10px] p-3 border border-[#1D3B7A]/55 flex-1 my-3">
-              <PItem l="指标" c="血糖"></PItem>
-              <PItem l="测量值" c="血糖"></PItem>
-              <PItem l="机构" c="血糖"></PItem>
-              <PItem l="预警编号" c="血糖"></PItem>
+              <PItem l="指标" c={detailData.metricLabel || "-"}></PItem>
+              <PItem l="测量值" c={detailData.measurementValue || "-"}></PItem>
+              <PItem l="机构" c={detailData.location || "-"}></PItem>
+              <PItem l="预警编号" c={detailData.warningId || "-"}></PItem>
             </div>
             <div className="flex gap-x-3">
               <Card title="患者信息">
                 <div>
-                  <PItem l="患者姓名" c="血糖"></PItem>
-                  <PItem l="性别" c="血糖"></PItem>
-                  <PItem l="年龄" c="血糖"></PItem>
-                  <PItem l="联系电话" c="血糖"></PItem>
+                  <PItem l="患者姓名" c={detailData.patientName || "-"}></PItem>
+                  <PItem l="性别" c={detailData.patientGender || "-"}></PItem>
+                  <PItem l="年龄" c={detailData.patientAge || "-"}></PItem>
+                  <PItem l="联系电话" c={detailData.patientPhone || "-"}></PItem>
                 </div>
               </Card>
               <Card title="医生信息">
-                <PItem l="医生姓名" c="血糖"></PItem>
-                <PItem l="联系电话" c="血糖"></PItem>
+                <PItem l="医生姓名" c={detailData.doctorName || "-"}></PItem>
+                <PItem l="联系电话" c={detailData.doctorPhone || "-"}></PItem>
               </Card>
             </div>
+            <Card title="近 7 天历史测量曲线">
+              <div className="h-52 pt-2">
+                <DeviceMonitorHistoryLineChart
+                  dates={detailData.historyDates || []}
+                  values={detailData.historyValues || []}
+                  className="h-full w-full"></DeviceMonitorHistoryLineChart>
+              </div>
+            </Card>
+            <DialogStatus
+              status={dialogState.status}
+              error={dialogState.error}
+              empty={dialogState.status === "success" && !dialogState.data}
+              emptyText="暂无预警详情数据"
+            />
           </div>
         </div>
       </DialogContent>
@@ -107,4 +189,24 @@ function PItem({ l, c }) {
       </p>
     </div>
   );
+}
+
+function DialogStatus({ status, error, empty, emptyText }) {
+  if (status === "loading") {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">弹窗数据加载中...</div>;
+  }
+
+  if (status === "error") {
+    return (
+      <div className="py-8 text-center text-sm text-[#FF9CA2]">
+        {error?.message || "弹窗数据加载失败"}
+      </div>
+    );
+  }
+
+  if (empty) {
+    return <div className="py-8 text-center text-sm text-[#9FB5DA]">{emptyText}</div>;
+  }
+
+  return null;
 }

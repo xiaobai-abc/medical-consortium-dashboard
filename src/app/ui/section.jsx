@@ -37,7 +37,11 @@ function SectionBody({ dashboardStatus, dashboardError, dashboardView }) {
             dashboardError={dashboardError}
             overviewCards={dashboardView.top}
           />
-          <MainMap></MainMap>
+          <MainMap
+            dashboardStatus={dashboardStatus}
+            dashboardError={dashboardError}
+            mapDistribution={dashboardView.mapDistribution}
+          />
         </div>
         <div className="h-full flex flex-col w-[22%] min-w-[420px]">
           <RightR1

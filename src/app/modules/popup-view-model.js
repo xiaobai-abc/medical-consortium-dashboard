@@ -1,3 +1,11 @@
+/**
+ * popup-view-model 专门负责“接口数据 -> 弹窗视图数据”的轻量整理。
+ *
+ * 这里故意不放请求逻辑，也不放 UI 组件。
+ * 这样做的目的有两点：
+ * 1. 后端字段变动时，只改这一层就能稳定弹窗组件。
+ * 2. 避免弹窗组件里堆满 pickFirst / 字段兼容代码，影响后续维护。
+ */
 function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
 }
@@ -8,10 +16,6 @@ function toNumber(value) {
   const parsedValue = Number(normalizedValue);
 
   return Number.isFinite(parsedValue) ? parsedValue : null;
-}
-
-function toArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function getObjectByPath(source, path) {
@@ -71,6 +75,10 @@ function formatOption(option, index) {
 }
 
 export function normalizeSelectOptions(source, candidates, fallbackOptions = []) {
+  /**
+   * 大部分 popup 都会返回筛选项 options。
+   * 这里统一转成 { label, value }，供 Select 组件复用。
+   */
   const options = pickArray(source, candidates);
 
   if (options.length > 0) {
@@ -81,6 +89,12 @@ export function normalizeSelectOptions(source, candidates, fallbackOptions = [])
 }
 
 export function normalizeServiceOverviewPopup(responseData, fallbackCenterOptions, fallbackRiskOptions) {
+  /**
+   * “今日总服务人次”弹窗是最典型的表格型弹窗：
+   * - 顶部有筛选项
+   * - 中间是 rows 列表
+   * 这里统一抽成 centerOptions / riskLevelOptions / items 三块。
+   */
   const itemsSource = pickArray(responseData, ["items", "list", "rows"]);
 
   return {
@@ -110,6 +124,10 @@ export function normalizeServiceOverviewPopup(responseData, fallbackCenterOption
 }
 
 export function normalizeFollowUpPopup(responseData, fallbackCenterOptions, fallbackMetricOptions, fallbackStatusOptions) {
+  /**
+   * 重点随访弹窗除了表格数据，还会返回多组筛选项。
+   * keyword 是输入框状态，不属于 options，因此仍由组件自己维护。
+   */
   const itemsSource = pickArray(responseData, ["items", "list", "rows"]);
 
   return {
@@ -142,6 +160,13 @@ export function normalizeFollowUpPopup(responseData, fallbackCenterOptions, fall
 }
 
 export function normalizeMeasurementPopup(responseData) {
+  /**
+   * 检测项目弹窗由三块组成：
+   * - 顶部 summary
+   * - 正常/异常占比
+   * - 底部 comparisonItems
+   * 这里一次性整理成组件可直接渲染的结构。
+   */
   const comparisonSource = pickArray(responseData, [
     "comparison_items",
     "comparisonItems",
@@ -177,6 +202,10 @@ export function normalizeMeasurementPopup(responseData) {
 }
 
 export function normalizeWarningDetail(responseData) {
+  /**
+   * 预警详情接口通常会把患者、医生、历史曲线拆在不同字段里。
+   * 这里把这些分散字段拍平成弹窗直接可读的结构。
+   */
   const patientInfo = pickFirst(responseData, ["patient_info", "patientInfo"], {});
   const doctorInfo = pickFirst(responseData, ["doctor_info", "doctorInfo"], {});
   const history = pickFirst(responseData, ["history", "measurement_history"], {});
@@ -206,6 +235,15 @@ export function normalizeWarningDetail(responseData) {
 }
 
 export function normalizeDeviceListPopup(responseData, fallbackTitle) {
+  /**
+   * 设备列表弹窗需要兼顾多入口：
+   * - 查看全部
+   * - 在线设备
+   * - 离线设备
+   * - 设备总数
+   * - 医院排行点击
+   * 标题和筛选项都可能由接口动态返回，所以统一在这里收口。
+   */
   const itemsSource = pickArray(responseData, ["items", "list", "devices"]);
 
   return {
@@ -231,6 +269,10 @@ export function normalizeDeviceListPopup(responseData, fallbackTitle) {
 }
 
 export function normalizeDeviceDetail(responseData) {
+  /**
+   * 设备详情和预警详情很像，都是“基础信息 + 人员信息 + 历史曲线”。
+   * 区别只是字段命名不同，所以单独保留一个解析函数，避免两边耦合。
+   */
   const patientInfo = pickFirst(responseData, ["patient_info", "patientInfo"], {});
   const doctorInfo = pickFirst(responseData, ["doctor_info", "doctorInfo"], {});
   const history = pickFirst(responseData, ["history", "measurement_history"], {});

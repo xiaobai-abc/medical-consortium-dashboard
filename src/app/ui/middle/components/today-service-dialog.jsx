@@ -19,8 +19,8 @@ import {
 import DialogCloseAction from "./dialog-close-action";
 import DialogHeaderSelect from "./dialog-header-select";
 
-const defaultServiceCenterOptions = [{ label: "全部卫生中心", value: "" }];
-const defaultRiskLevelOptions = [{ label: "全部等级", value: "" }];
+const defaultServiceCenterOptions = [{ label: "全部卫生中心", value: "全部卫生中心" }];
+const defaultRiskLevelOptions = [{ label: "全部等级", value: "全部等级" }];
 
 /**
  * “今日总服务人次”弹窗只处理两类事情：
@@ -29,8 +29,8 @@ const defaultRiskLevelOptions = [{ label: "全部等级", value: "" }];
  * 这样和顶部卡片职责天然分离，后续替换业务字段也更安全。
  */
 function TodayServiceDialog({ open, onOpenChange }) {
-  const [selectedCenter, setSelectedCenter] = useState("");
-  const [selectedRiskLevel, setSelectedRiskLevel] = useState("");
+  const [selectedCenter, setSelectedCenter] = useState(defaultServiceCenterOptions[0].value);
+  const [selectedRiskLevel, setSelectedRiskLevel] = useState(defaultRiskLevelOptions[0].value);
   const [dialogState, setDialogState] = useState({
     status: "idle",
     data: {
@@ -66,8 +66,14 @@ function TodayServiceDialog({ open, onOpenChange }) {
       });
 
       getServiceOverviewPopup({
-        service_center: selectedCenter || undefined,
-        risk_level: selectedRiskLevel || undefined,
+        service_center:
+          selectedCenter === defaultServiceCenterOptions[0].value
+            ? undefined
+            : selectedCenter,
+        risk_level:
+          selectedRiskLevel === defaultRiskLevelOptions[0].value
+            ? undefined
+            : selectedRiskLevel,
       })
         .then(function handleSuccess(responseData) {
           if (disposed) {
