@@ -9,18 +9,30 @@ import {
   SelectValue
 } from "@/shadcn/ui/select";
 
-const defaultDeviceOptions = [{ label: "筛选设备", value: "筛选设备" }];
+const defaultDeviceOptions = [{ label: "筛选设备", value: "" }];
 
 function getOptionValue(option) {
   if (typeof option === "string") {
     return option;
   }
 
-  return String(option?.value || option?.label || "");
+  /**
+   * 这里要保留空字符串 value。
+   * “筛选设备”这类默认项依赖 value="" 参与请求，不能被 || 吞掉。
+   */
+  return String(option?.value ?? option?.label ?? "");
 }
 
 function getOptionLabel(option) {
   return typeof option === "string" ? option : String(option?.label ?? option?.value ?? "");
+}
+
+function getSelectedOptionLabel(options, value) {
+  const selectedOption = options.find(function matchOption(option) {
+    return getOptionValue(option) === String(value);
+  });
+
+  return selectedOption ? getOptionLabel(selectedOption) : "";
 }
 
 /**
@@ -30,13 +42,14 @@ function DeviceMonitorFilterSelect({ value = "", options, onValueChange }) {
   const normalizedOptions = Array.isArray(options) && options.length > 0
     ? options
     : defaultDeviceOptions;
+  const selectedLabel = getSelectedOptionLabel(normalizedOptions, value);
 
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger
         size="sm"
         className="w-[260px] border-[#2452A4]/85 bg-[rgba(12,24,52,0.94)] text-[#D6E0F5] shadow-[inset_0_0_0_1px_rgba(60,106,187,0.15)] hover:bg-[rgba(17,31,61,0.98)]">
-        <SelectValue placeholder="筛选设备" />
+        <SelectValue placeholder="筛选设备">{selectedLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent
         align="start"

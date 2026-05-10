@@ -282,33 +282,41 @@ export function normalizeWarningDetail(responseData) {
 
 export function normalizeDeviceListPopup(responseData, fallbackTitle) {
   /**
-   * 设备列表弹窗需要兼顾多入口：
-   * - 查看全部
-   * - 在线设备
-   * - 离线设备
-   * - 设备总数
-   * - 医院排行点击
-   * 标题和筛选项都可能由接口动态返回，所以统一在这里收口。
+   * 设备列表弹窗已经有真实接口结构，这里按实际返回字段整理。
+   * 当前确认过的字段：
+   * - filters.device_type_options
+   * - summary.title
+   * - items
    */
-  const itemsSource = pickArray(responseData, ["items", "list", "devices"]);
+  const filterConfig = responseData?.filters || {};
+  const summary = responseData?.summary || {};
+  const deviceTypeOptions = Array.isArray(filterConfig?.device_type_options)
+    ? filterConfig.device_type_options
+    : [];
+  const itemsSource = Array.isArray(responseData?.items) ? responseData.items : [];
 
   return {
-    title: pickFirst(responseData, ["title"], fallbackTitle),
-    deviceOptions: normalizeSelectOptions(
-      responseData,
-      ["device_type_options", "deviceTypeOptions", "filters.device_type_options", "filters.device_types"],
-      [{ label: "筛选设备", value: "" }]
-    ),
+    title: summary?.title || fallbackTitle,
+    deviceOptions:
+      [
+        { label: "筛选设备", value: "" },
+        ...deviceTypeOptions.map(function mapDeviceTypeOption(option, index) {
+          return {
+            label: String(option?.name || `设备 ${index + 1}`),
+            value: String(option?.code ?? ""),
+          };
+        }),
+      ],
     items: itemsSource.map(function mapItem(item, index) {
       return {
-        deviceCode: pickFirst(item, ["device_code", "deviceCode", "code"], `DEV-${index + 1}`),
-        statusText: pickFirst(item, ["status_text", "statusText", "device_status"], "-"),
-        statusColor: pickFirst(item, ["status_color", "statusColor"], "#FF4D4F"),
-        deviceType: pickFirst(item, ["device_type", "deviceType"], "-"),
-        metricName: pickFirst(item, ["metric_label", "metricName", "metric_name"], "-"),
-        hospitalName: pickFirst(item, ["hospital_name", "hospitalName"], "-"),
-        lastUpdateTime: pickFirst(item, ["last_update_time", "lastUpdateTime"], "-"),
-        patientName: pickFirst(item, ["patient_name", "patientName"], "-"),
+        deviceCode: item?.device_code || item?.sn || `DEV-${index + 1}`,
+        statusText: item?.status_text || "-",
+        statusColor: item?.status === "online" ? "#22C55E" : "#FF4D4F",
+        deviceType: item?.device_type_name || item?.device_type || "-",
+        metricName: item?.metric_name || "-",
+        hospitalName: item?.hospital_name || "-",
+        lastUpdateTime: item?.last_update_time || "--",
+        patientName: item?.patient_name || "-",
       };
     }),
   };
@@ -316,33 +324,44 @@ export function normalizeDeviceListPopup(responseData, fallbackTitle) {
 
 export function normalizeDeviceDetail(responseData) {
   /**
-   * 设备详情和预警详情很像，都是“基础信息 + 人员信息 + 历史曲线”。
-   * 区别只是字段命名不同，所以单独保留一个解析函数，避免两边耦合。
+   * 设备详情弹窗已经有真实接口结构，这里按 detail 字段整理。
    */
-  const patientInfo = pickFirst(responseData, ["patient_info", "patientInfo"], {});
-  const doctorInfo = pickFirst(responseData, ["doctor_info", "doctorInfo"], {});
-  const history = pickFirst(responseData, ["history", "measurement_history"], {});
-  const historyPoints = pickArray(history, ["points", "items", "data"]);
+  const detail = responseData?.detail || {};
+  const patientInfo = detail?.patient || {};
+  const doctorInfo = detail?.doctor || {};
+  const history = detail?.history || {};
+  const historySeries = Array.isArray(history?.series) ? history.series : [];
+  const primarySeries = historySeries[0] || {};
+  const historyDates = Array.isArray(history?.history_dates)
+    ? history.history_dates
+    : Array.isArray(primarySeries?.dates)
+      ? primarySeries.dates
+      : [];
+  const historyValues = Array.isArray(history?.history_values)
+    ? history.history_values
+    : Array.isArray(primarySeries?.values)
+      ? primarySeries.values
+      : [];
 
   return {
-    deviceCode: pickFirst(responseData, ["device_code", "deviceCode"], "-"),
-    statusText: pickFirst(responseData, ["status_text", "statusText"], "-"),
-    statusColor: pickFirst(responseData, ["status_color", "statusColor"], "#FF4D4F"),
-    deviceType: pickFirst(responseData, ["device_type", "deviceType"], "-"),
-    metricName: pickFirst(responseData, ["metric_label", "metricName", "metric_name"], "-"),
-    hospitalName: pickFirst(responseData, ["hospital_name", "hospitalName"], "-"),
-    lastUpdateTime: pickFirst(responseData, ["last_update_time", "lastUpdateTime"], "-"),
-    patientName: pickFirst(patientInfo, ["patient_name", "name"], "-"),
-    gender: pickFirst(patientInfo, ["gender"], "-"),
-    age: pickFirst(patientInfo, ["age"], "-"),
-    phone: pickFirst(patientInfo, ["phone", "mobile"], "-"),
-    doctorName: pickFirst(doctorInfo, ["doctor_name", "name"], "-"),
-    doctorPhone: pickFirst(doctorInfo, ["phone", "mobile"], "-"),
-    historyDates: historyPoints.map(function mapPoint(point, index) {
-      return String(pickFirst(point, ["date", "day", "time"], index + 1));
+    deviceCode: detail?.device_code || "-",
+    statusText: detail?.status_text || "-",
+    statusColor: detail?.status === "online" ? "#22C55E" : "#FF4D4F",
+    deviceType: detail?.device_type_name || detail?.device_type || "-",
+    metricName: detail?.metric_name || "-",
+    hospitalName: detail?.hospital_name || "-",
+    lastUpdateTime: detail?.last_update_time || "--",
+    patientName: patientInfo?.name || "-",
+    gender: patientInfo?.gender || "-",
+    age: patientInfo?.age || "-",
+    phone: patientInfo?.phone || "-",
+    doctorName: doctorInfo?.name || "-",
+    doctorPhone: doctorInfo?.phone || "-",
+    historyDates: historyDates.map(function mapHistoryDate(dateValue) {
+      return String(dateValue);
     }),
-    historyValues: historyPoints.map(function mapPoint(point) {
-      return toNumber(pickFirst(point, ["value", "measurement_value", "count"])) || 0;
+    historyValues: historyValues.map(function mapHistoryValue(value) {
+      return toNumber(value) || 0;
     }),
   };
 }

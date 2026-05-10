@@ -41,7 +41,7 @@ const deviceSummaryColumns = [
  */
 function DeviceMonitorDialogRoot() {
   const [activeDeviceDetail, setActiveDeviceDetail] = useState(null);
-  const [selectedDeviceType, setSelectedDeviceType] = useState("筛选设备");
+  const [selectedDeviceType, setSelectedDeviceType] = useState("");
   const [dialogState, setDialogState] = useState({
     status: "idle",
     data: {
@@ -102,10 +102,20 @@ function DeviceMonitorDialogRoot() {
       });
 
       getDeviceListPopup({
+        /**
+         * 这条接口当前确认过的筛选参数是：
+         * - dialog_type
+         * - device_status
+         * - hospital_name
+         * - device_type
+         *
+         * device_type 先按文档参数语义保留原始值，
+         * 不再额外把“筛选设备”推断成 all。
+         */
         dialog_type: dialogType,
         device_status: dialogPayload?.deviceStatus,
         hospital_name: dialogPayload?.hospitalName,
-        device_type: selectedDeviceType === "筛选设备" ? undefined : selectedDeviceType,
+        device_type: selectedDeviceType,
       })
         .then(function handleSuccess(responseData) {
           if (disposed) {
@@ -145,7 +155,7 @@ function DeviceMonitorDialogRoot() {
   useEffect(
     function resetDeviceFilterWhenDialogChanges() {
       if (!isOpen) {
-        setSelectedDeviceType("筛选设备");
+        setSelectedDeviceType("");
       }
     },
     [isOpen]
@@ -187,7 +197,7 @@ function DeviceMonitorDialogRoot() {
             </div>
           </div>
           <hr className="text-[#1D3B7A]/35 my-3" />
-          <ScrollArea className="min-h-0 flex-1">
+          <ScrollArea className="min-h-[520px] flex-1">
             <div className="space-y-3 pr-3">
               {dialogState.data.items.map(function renderDeviceCard(deviceItem) {
                 return (

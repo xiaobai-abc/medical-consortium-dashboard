@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogTitle
 } from "@/shadcn/ui/dialog";
+import { ScrollArea } from "@/shadcn/ui/scroll-area";
 import DeviceMonitorHistoryLineChart from "./history-line-chart";
 
 /**
@@ -83,7 +84,7 @@ function DeviceMonitorDetailDialog({ open, onOpenChange, deviceDetail }) {
         showCloseButton={false}
         className="w-[980px] max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 sm:max-w-[980px]">
         <div
-          className="bd1 rounded-2xl px-4 py-4 flex flex-col bg-[#1b233a]"
+          className="bd1 flex max-h-[min(780px,calc(100vh-3rem))] flex-col rounded-2xl bg-[#1b233a] px-4 py-4"
           style={{
             background:
               "radial-gradient(ellipse at left 10% top 10%, rgb(0 231 255 / 10%), transparent 55%),linear-gradient(to bottom,rgb(11 21 48 / 95%) 0%, rgb(11 21 48 / 85%) 100%)"
@@ -106,60 +107,62 @@ function DeviceMonitorDetailDialog({ open, onOpenChange, deviceDetail }) {
             </div>
           </div>
           <hr className="text-[#1D3B7A]/35 my-3" />
-          <div className="min-h-[460px]">
-            <div className=" grid grid-cols-[1.1fr_1fr] gap-3.5 mb-3">
-              <Card title="设备信息">
-                <div className="mt-2 space-y-2.5">
-                  <PItem l="设备编号" c={detailData.deviceCode}></PItem>
-                  <PItem l="设备类型" c={detailData.deviceType}></PItem>
-                  <PItem
-                    l="设备状态"
-                    c={
-                      <span style={{ color: detailData.statusColor || "#F87171" }}>
-                        {detailData.statusText}
-                      </span>
-                    }></PItem>
-                  <PItem
-                    l="检测项目"
-                    c={detailData.metricName}></PItem>
-                  <PItem l="最后更新" c={detailData.lastUpdateTime}></PItem>
-                </div>
-              </Card>
-              <Card title="患者信息">
-                <div className="mt-2 space-y-2.5">
-                  <PItem l="患者姓名" c={detailData.patientName}></PItem>
-                  <PItem l="性别" c={detailData.gender}></PItem>
-                  <PItem l="年龄" c={detailData.age}></PItem>
-                  <PItem l="联系电话" c={detailData.phone}></PItem>
-                </div>
-              </Card>
-              <Card title="医生信息">
-                <div className="mt-2 space-y-2.5">
-                  <PItem l="医生姓名" c={detailData.doctorName}></PItem>
-                  <PItem l="联系电话" c={detailData.doctorPhone}></PItem>
-                </div>
-              </Card>
-              <Card title="所属医院">
-                <div className="mt-2 space-y-2.5">
-                  <PItem l="医院名称" c={detailData.hospitalName}></PItem>
-                </div>
-              </Card>
-            </div>
-            <Card title="历史测量数据(近七天)">
-              <div className="h-52 pt-2">
-                <DeviceMonitorHistoryLineChart
-                  dates={historyDates}
-                  values={historyValues}
-                  className="h-full w-full"></DeviceMonitorHistoryLineChart>
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="pr-3">
+              <div className="mb-3 grid grid-cols-[1.1fr_1fr] gap-3.5">
+                <Card title="设备信息">
+                  <div className="mt-2 space-y-2.5">
+                    <PItem l="设备编号" c={detailData.deviceCode}></PItem>
+                    <PItem l="设备类型" c={detailData.deviceType}></PItem>
+                    <PItem
+                      l="设备状态"
+                      c={
+                        <span style={{ color: detailData.statusColor || "#F87171" }}>
+                          {detailData.statusText}
+                        </span>
+                      }></PItem>
+                    <PItem
+                      l="检测项目"
+                      c={detailData.metricName}></PItem>
+                    <PItem l="最后更新" c={detailData.lastUpdateTime}></PItem>
+                  </div>
+                </Card>
+                <Card title="患者信息">
+                  <div className="mt-2 space-y-2.5">
+                    <PItem l="患者姓名" c={detailData.patientName}></PItem>
+                    <PItem l="性别" c={detailData.gender}></PItem>
+                    <PItem l="年龄" c={detailData.age}></PItem>
+                    <PItem l="联系电话" c={detailData.phone}></PItem>
+                  </div>
+                </Card>
+                <Card title="医生信息">
+                  <div className="mt-2 space-y-2.5">
+                    <PItem l="医生姓名" c={detailData.doctorName}></PItem>
+                    <PItem l="联系电话" c={detailData.doctorPhone}></PItem>
+                  </div>
+                </Card>
+                <Card title="所属医院">
+                  <div className="mt-2 space-y-2.5">
+                    <PItem l="医院名称" c={detailData.hospitalName}></PItem>
+                  </div>
+                </Card>
               </div>
-            </Card>
-            <DialogStatus
-              status={dialogState.status}
-              error={dialogState.error}
-              empty={dialogState.status === "success" && !dialogState.data}
-              emptyText="暂无设备详情数据"
-            />
-          </div>
+              <Card title="历史测量数据(近七天)">
+                <div className="h-52 pt-2">
+                  <DeviceMonitorHistoryLineChart
+                    dates={historyDates}
+                    values={historyValues}
+                    className="h-full w-full"></DeviceMonitorHistoryLineChart>
+                </div>
+              </Card>
+              <DialogStatus
+                status={dialogState.status}
+                error={dialogState.error}
+                empty={dialogState.status === "success" && !dialogState.data}
+                emptyText="暂无设备详情数据"
+              />
+            </div>
+          </ScrollArea>
         </div>
       </DialogContent>
     </Dialog>
