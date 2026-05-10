@@ -1,5 +1,4 @@
 import { getHomeHeaderData } from "./modules/home-header";
-import ScreenHeader from "./components/screen-header";
 import HomeDashboardClient from "./ui/home-dashboard-client";
 
 /**
@@ -11,11 +10,7 @@ export default function HomePage() {
   return (
     <main className="screen-grid-bg h-screen w-screen overflow-hidden text-white">
       <div className="mx-auto h-screen w-screen py-3.5 px-4.5 grid grid-rows-[auto_1fr] ">
-        <ScreenHeader
-          title={headerData.title}
-          statusText={headerData.statusText}
-        />
-        <HomeDashboardClient />
+        <HomeDashboardClient headerData={headerData} />
       </div>
     </main>
   );

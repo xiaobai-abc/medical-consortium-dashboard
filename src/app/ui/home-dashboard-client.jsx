@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { getDashboardData } from "@/api";
+import ScreenHeader from "../components/screen-header";
 import { buildHomeDashboardView } from "../modules/dashboard-view-model";
 import SectionBody from "./section";
 
@@ -16,16 +17,14 @@ import SectionBody from "./section";
  *
  * 这样后面继续扩展首页模块时，数据源仍然只有一处。
  */
-function HomeDashboardClient() {
+function HomeDashboardClient({ headerData }) {
   const [dashboardState, setDashboardState] = useState({
     status: "loading",
     data: null,
     error: null,
   });
 
-  useEffect(function requestDashboardOnMount() {
-    let disposed = false;
-
+  function requestDashboardData() {
     /**
      * 首页只在首次进入时请求一次聚合接口。
      * 后续如果要做轮询或手动刷新，也应该继续收敛在这个组件里，
@@ -37,12 +36,8 @@ function HomeDashboardClient() {
       error: null,
     });
 
-    getDashboardData()
+    return getDashboardData()
       .then(function handleSuccess(dashboardData) {
-        if (disposed) {
-          return;
-        }
-
         setDashboardState({
           status: "success",
           data: dashboardData,
@@ -50,28 +45,32 @@ function HomeDashboardClient() {
         });
       })
       .catch(function handleError(error) {
-        if (disposed) {
-          return;
-        }
-
         setDashboardState({
           status: "error",
           data: null,
           error,
         });
       });
+  }
 
-    return function cleanupDashboardRequest() {
-      disposed = true;
-    };
+  useEffect(function requestDashboardOnMount() {
+    requestDashboardData();
   }, []);
 
   return (
-    <SectionBody
-      dashboardStatus={dashboardState.status}
-      dashboardError={dashboardState.error}
-      dashboardView={buildHomeDashboardView(dashboardState.data)}
-    />
+    <>
+      <ScreenHeader
+        title={headerData.title}
+        statusText={headerData.statusText}
+        onRefresh={requestDashboardData}
+        refreshing={dashboardState.status === "loading"}
+      />
+      <SectionBody
+        dashboardStatus={dashboardState.status}
+        dashboardError={dashboardState.error}
+        dashboardView={buildHomeDashboardView(dashboardState.data)}
+      />
+    </>
   );
 }
 

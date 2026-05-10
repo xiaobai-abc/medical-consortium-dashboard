@@ -157,7 +157,7 @@ function DeviceMonitorDialogRoot() {
         showCloseButton={false}
         className="w-[980px] max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 sm:max-w-[980px]">
         <div
-          className="bd1 rounded-2xl px-4 py-4 flex flex-col bg-[#1b233a]"
+          className="bd1 flex max-h-[min(780px,calc(100vh-3rem))] flex-col rounded-2xl bg-[#1b233a] px-4 py-4"
           style={{
             background:
               "radial-gradient(ellipse at left 10% top 10%, rgb(0 231 255 / 10%), transparent 55%),linear-gradient(to bottom,rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
@@ -187,8 +187,8 @@ function DeviceMonitorDialogRoot() {
             </div>
           </div>
           <hr className="text-[#1D3B7A]/35 my-3" />
-          <ScrollArea className="min-h-[460px]">
-            <div>
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="space-y-3 pr-3">
               {dialogState.data.items.map(function renderDeviceCard(deviceItem) {
                 return (
                   <DeviceCard
@@ -226,7 +226,7 @@ function DeviceCard({ deviceItem, onClick }) {
 
   return (
     <div
-      className="py-4.5 px-3.5 border border-[#1D3B7A]/35 rounded-[10px] cursor-pointer transition-colors hover:bg-[rgba(17,31,61,0.48)]"
+      className="cursor-pointer rounded-[10px] border border-[#1D3B7A]/35 px-3.5 py-4.5 transition-colors hover:bg-[rgba(17,31,61,0.48)]"
       onClick={handleClick}>
       <div className="flex items-center justify-between">
         <h6 className="leading-none text-sm text-[#E8F0FF]/95 font-bold">

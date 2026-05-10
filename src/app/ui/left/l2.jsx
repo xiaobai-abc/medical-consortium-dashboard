@@ -75,8 +75,8 @@ function LeftL2({ warningTrends, dashboardStatus, dashboardError }) {
         />
       </div>
       {/* 选择部分 */}
-      <div className="mb-3 flex items-center">
-        <div className="flex flex-wrap flex-1">
+      <div className="mb-3 flex items-center gap-x-2">
+        <div className="flex min-w-0 flex-1 flex-wrap">
           {primaryMetricList.map(function renderPrimaryMetric(item, index) {
             return (
               <MetricButton
@@ -91,7 +91,7 @@ function LeftL2({ warningTrends, dashboardStatus, dashboardError }) {
             );
           })}
         </div>
-        <div className="pl-2">
+        <div className="w-[112px] shrink-0">
           <Select
             value={isActiveMetricInSelect ? activeMetricKey : ""}
             disabled={!hasTrendData}
@@ -99,9 +99,9 @@ function LeftL2({ warningTrends, dashboardStatus, dashboardError }) {
               setActiveMetricKey(value);
             }}>
             <SelectTrigger
-              className="h-8 min-w-[96px] rounded-[10px] border border-[#7F69D7]/55 bg-[rgba(12,24,52,0.88)] px-3 text-xs text-[#D6E0F5] hover:bg-[rgba(16,30,61,0.96)]"
+              className="h-8 w-full min-w-0 rounded-[10px] border border-[#7F69D7]/55 bg-[rgba(12,24,52,0.88)] px-3 text-xs text-[#D6E0F5] hover:bg-[rgba(16,30,61,0.96)]"
               size="sm">
-              <SelectValue>
+              <SelectValue className="min-w-0 truncate">
                 {isActiveMetricInSelect ? activeMetric.label : "更多指标"}
               </SelectValue>
             </SelectTrigger>
