@@ -93,34 +93,58 @@ export function normalizeSelectOptions(source, candidates, fallbackOptions = [])
 
 export function normalizeServiceOverviewPopup(responseData, fallbackCenterOptions, fallbackRiskOptions) {
   /**
-   * “今日总服务人次”弹窗是最典型的表格型弹窗：
-   * - 顶部有筛选项
-   * - 中间是 rows 列表
-   * 这里统一抽成 centerOptions / riskLevelOptions / items 三块。
+   * “今日总服务人次”弹窗已经有真实接口结构，这里按实际返回字段整理。
+   *
+   * 当前确认过的字段：
+   * - filters.center_options
+   * - filters.risk_level_options
+   * - items
+   *
+   * 其中：
+   * - center_options 是字符串数组
+   * - risk_level_options 是对象数组，包含 key / label / color
+   * - items 是列表数据；当前样例为空数组，行字段先按这条接口语义直接收口
    */
-  const itemsSource = pickArray(responseData, ["items", "list", "rows"]);
+  const filterConfig = responseData?.filters || {};
+  const centerOptions = Array.isArray(filterConfig?.center_options)
+    ? filterConfig.center_options
+    : [];
+  const riskLevelOptions = Array.isArray(filterConfig?.risk_level_options)
+    ? filterConfig.risk_level_options
+    : [];
+  const itemsSource = Array.isArray(responseData?.items) ? responseData.items : [];
 
   return {
-    centerOptions: normalizeSelectOptions(
-      responseData,
-      ["center_options", "centerOptions", "filters.center_options", "filters.centers"],
-      fallbackCenterOptions
-    ),
-    riskLevelOptions: normalizeSelectOptions(
-      responseData,
-      ["risk_level_options", "riskLevelOptions", "filters.risk_level_options", "filters.risk_levels"],
-      fallbackRiskOptions
-    ),
+    centerOptions:
+      centerOptions.length > 0
+        ? centerOptions.map(function mapCenterOption(option, index) {
+            if (typeof option === "string" && option === "全部卫生中心") {
+              return {
+                label: option,
+                value: "",
+              };
+            }
+
+            return formatOption(option, index);
+          })
+        : fallbackCenterOptions.map(formatOption),
+    riskLevelOptions:
+      riskLevelOptions.length > 0
+        ? riskLevelOptions.map(function mapRiskLevelOption(option, index) {
+            return {
+              label: String(option?.label || `选项 ${index + 1}`),
+              value: String(option?.key || option?.label || index + 1),
+            };
+          })
+        : fallbackRiskOptions.map(formatOption),
     items: itemsSource.map(function mapItem(item, index) {
       return {
-        id: String(pickFirst(item, ["id", "center_id", "name"], `service-${index + 1}`)),
-        centerName: pickFirst(item, ["center_name", "centerName", "name"], "-"),
-        serviceCount: toNumber(pickFirst(item, ["service_count", "serviceCount", "count"])) || 0,
-        abnormalCount:
-          toNumber(pickFirst(item, ["abnormal_count", "abnormalCount", "warning_count"])) || 0,
-        riskLevel: pickFirst(item, ["risk_level", "riskLevel", "level"], "-"),
-        riskLevelColor:
-          pickFirst(item, ["risk_level_color", "riskLevelColor"], "#E8F0FF"),
+        id: String(item?.center_id || item?.center_name || `service-${index + 1}`),
+        centerName: item?.center_name || "-",
+        serviceCount: toNumber(item?.service_count) || 0,
+        abnormalCount: toNumber(item?.abnormal_count) || 0,
+        riskLevel: item?.risk_level_label || item?.risk_level || "-",
+        riskLevelColor: item?.risk_level_color || "#E8F0FF",
       };
     }),
   };

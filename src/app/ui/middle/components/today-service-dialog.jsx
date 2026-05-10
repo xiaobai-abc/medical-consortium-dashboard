@@ -19,8 +19,8 @@ import {
 import DialogCloseAction from "./dialog-close-action";
 import DialogHeaderSelect from "./dialog-header-select";
 
-const defaultServiceCenterOptions = [{ label: "全部卫生中心", value: "全部卫生中心" }];
-const defaultRiskLevelOptions = [{ label: "全部等级", value: "全部等级" }];
+const defaultServiceCenterOptions = [{ label: "全部卫生中心", value: "" }];
+const defaultRiskLevelOptions = [{ label: "全部等级", value: "all" }];
 
 /**
  * “今日总服务人次”弹窗只处理两类事情：
@@ -66,14 +66,14 @@ function TodayServiceDialog({ open, onOpenChange }) {
       });
 
       getServiceOverviewPopup({
-        service_center:
-          selectedCenter === defaultServiceCenterOptions[0].value
-            ? undefined
-            : selectedCenter,
-        risk_level:
-          selectedRiskLevel === defaultRiskLevelOptions[0].value
-            ? undefined
-            : selectedRiskLevel,
+        /**
+         * 这条接口需要显式传默认值：
+         * - center_name 默认空字符串
+         * - risk_level 默认 all
+         * 页面展示仍然走中文 label，由下拉 options 自己映射。
+         */
+        center_name: selectedCenter,
+        risk_level: selectedRiskLevel,
       })
         .then(function handleSuccess(responseData) {
           if (disposed) {
