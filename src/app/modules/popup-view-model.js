@@ -1,3 +1,5 @@
+import dayjs from "dayjs";
+
 /**
  * popup-view-model 专门负责“接口数据 -> 弹窗视图数据”的轻量整理。
  *
@@ -221,33 +223,59 @@ export function normalizeFollowUpPopup(responseData, fallbackCenterOptions, fall
 
 export function normalizeWarningDetail(responseData) {
   /**
-   * 预警详情接口通常会把患者、医生、历史曲线拆在不同字段里。
-   * 这里把这些分散字段拍平成弹窗直接可读的结构。
+   * 实时预警详情弹窗已经有真实接口结构，这里按 detail 字段整理。
+   *
+   * 当前确认过的字段：
+   * - detail.warning_level
+   * - detail.metric_name / metric_value / occurred_at
+   * - detail.warning_code
+   * - detail.patient
+   * - detail.doctor
+   * - detail.history
    */
-  const patientInfo = pickFirst(responseData, ["patient_info", "patientInfo"], {});
-  const doctorInfo = pickFirst(responseData, ["doctor_info", "doctorInfo"], {});
-  const history = pickFirst(responseData, ["history", "measurement_history"], {});
-  const historyPoints = pickArray(history, ["points", "items", "data"]);
+  const detail = responseData?.detail || {};
+  const patientInfo = detail?.patient || {};
+  const doctorInfo = detail?.doctor || {};
+  const history = detail?.history || {};
+  const historySeries = Array.isArray(history?.series) ? history.series : [];
+  const primarySeries = historySeries[0] || {};
+  const historyDates = Array.isArray(history?.history_dates)
+    ? history.history_dates
+    : Array.isArray(primarySeries?.dates)
+      ? primarySeries.dates
+      : [];
+  const historyValues = Array.isArray(history?.history_values)
+    ? history.history_values
+    : Array.isArray(primarySeries?.values)
+      ? primarySeries.values
+      : [];
 
   return {
-    warningLevel: pickFirst(responseData, ["warning_level", "warningLevel", "level"], "-"),
-    warningLevelColor: pickFirst(responseData, ["warning_level_color", "warningLevelColor"], "#FFCC66"),
-    occurredAt: pickFirst(responseData, ["occurred_at", "warning_time", "warningTime"], "-"),
-    metricLabel: pickFirst(responseData, ["metric_label", "metricName", "metric_name"], "-"),
-    measurementValue: pickFirst(responseData, ["metric_value", "metricValue", "measurement_value"], "-"),
-    location: pickFirst(responseData, ["location", "hospital_name", "hospitalName"], "-"),
-    warningId: pickFirst(responseData, ["warningId", "warning_id", "id"], "-"),
-    patientName: pickFirst(patientInfo, ["patient_name", "name"], "-"),
-    patientGender: pickFirst(patientInfo, ["gender"], "-"),
-    patientAge: pickFirst(patientInfo, ["age"], "-"),
-    patientPhone: pickFirst(patientInfo, ["phone", "mobile"], "-"),
-    doctorName: pickFirst(doctorInfo, ["doctor_name", "name"], "-"),
-    doctorPhone: pickFirst(doctorInfo, ["phone", "mobile"], "-"),
-    historyDates: historyPoints.map(function mapPoint(point, index) {
-      return String(pickFirst(point, ["date", "day", "time"], index + 1));
+    warningLevel: detail?.warning_level || "-",
+    /**
+     * TODO:
+     * 目前文档里这条接口只确认了“告警”这一种状态，
+     * 所以先统一使用告警态黄色。后续如果接口补充等级颜色，再按真实字段切换。
+     */
+    warningLevelColor: "#FFCC66",
+    occurredAt: detail?.occurred_at
+      ? dayjs(detail.occurred_at).format("YYYY-MM-DD HH:mm:ss")
+      : "-",
+    metricLabel: detail?.metric_name || "-",
+    measurementValue: detail?.metric_value || "-",
+    location: detail?.hospital_name || detail?.department_name || "-",
+    warningId: detail?.warning_code || String(detail?.id || "-"),
+    patientName: patientInfo?.name || "-",
+    patientGender: patientInfo?.gender || "-",
+    patientAge: patientInfo?.age || "-",
+    patientPhone: patientInfo?.phone || "-",
+    doctorName: doctorInfo?.name || "-",
+    doctorPhone: doctorInfo?.phone || "-",
+    historyDates: historyDates.map(function mapHistoryDate(dateValue) {
+      return String(dateValue);
     }),
-    historyValues: historyPoints.map(function mapPoint(point) {
-      return toNumber(pickFirst(point, ["value", "measurement_value", "count"])) || 0;
+    historyValues: historyValues.map(function mapHistoryValue(value) {
+      return toNumber(value) || 0;
     }),
   };
 }

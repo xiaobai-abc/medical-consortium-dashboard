@@ -14,7 +14,8 @@ import {
 import DeviceMonitorHistoryLineChart from "../../components/device-monitor-dialog/history-line-chart";
 
 /**
- * 异常预警详情弹窗复用现有大屏弹窗壳子，内容区暂时留空。
+ * 异常预警详情弹窗复用现有大屏弹窗壳子。
+ * 当前先专注于接口字段展示，未确认的区块先保留注释，不直接删除。
  */
 function RightAlertDetailDialog({ open, onOpenChange, alertDetail }) {
   const safeAlertDetail = alertDetail || {};
@@ -148,14 +149,19 @@ function RightAlertDetailDialog({ open, onOpenChange, alertDetail }) {
                 <PItem l="联系电话" c={detailData.doctorPhone || "-"}></PItem>
               </Card>
             </div>
-            <Card title="近 7 天历史测量曲线">
-              <div className="h-52 pt-2">
-                <DeviceMonitorHistoryLineChart
-                  dates={detailData.historyDates || []}
-                  values={detailData.historyValues || []}
-                  className="h-full w-full"></DeviceMonitorHistoryLineChart>
-              </div>
-            </Card>
+            {/*
+              TODO:
+              当前弹窗先不展示“近 7 天历史测量曲线”。
+              这段代码先保留，等后续确认图表数据和展示方式后再恢复。
+              <Card title="近 7 天历史测量曲线">
+                <div className="h-52 pt-2">
+                  <DeviceMonitorHistoryLineChart
+                    dates={detailData.historyDates || []}
+                    values={detailData.historyValues || []}
+                    className="h-full w-full"></DeviceMonitorHistoryLineChart>
+                </div>
+              </Card>
+            */}
             <DialogStatus
               status={dialogState.status}
               error={dialogState.error}
