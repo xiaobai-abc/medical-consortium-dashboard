@@ -4,7 +4,10 @@
  * 这里故意不放请求逻辑，也不放 UI 组件。
  * 这样做的目的有两点：
  * 1. 后端字段变动时，只改这一层就能稳定弹窗组件。
- * 2. 避免弹窗组件里堆满 pickFirst / 字段兼容代码，影响后续维护。
+ * 2. 避免复用型弹窗组件里堆满字段兼容代码，影响后续维护。
+ *
+ * 检测项目弹窗的结构已经稳定，而且只在 l1.jsx 使用。
+ * 那条链路现在直接在组件内整理数据，方便联调时顺着请求和 UI 一路往下看。
  */
 function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
@@ -154,48 +157,6 @@ export function normalizeFollowUpPopup(responseData, fallbackCenterOptions, fall
         metricName: pickFirst(item, ["metric_label", "metric_name", "metricName"], "-"),
         statusText: pickFirst(item, ["status_text", "statusText", "follow_up_status"], "-"),
         lastCheckTime: pickFirst(item, ["last_check_time", "lastCheckTime", "time"], "-"),
-      };
-    }),
-  };
-}
-
-export function normalizeMeasurementPopup(responseData) {
-  /**
-   * 检测项目弹窗由三块组成：
-   * - 顶部 summary
-   * - 正常/异常占比
-   * - 底部 comparisonItems
-   * 这里一次性整理成组件可直接渲染的结构。
-   */
-  const comparisonSource = pickArray(responseData, [
-    "comparison_items",
-    "comparisonItems",
-    "comparison",
-    "items",
-  ]);
-
-  return {
-    totalMeasurements:
-      toNumber(pickFirst(responseData, ["total_measurements", "totalMeasurements", "summary.total_measurements"])) || 0,
-    abnormalCount:
-      toNumber(pickFirst(responseData, ["abnormal_count", "abnormalCount", "summary.abnormal_count"])) || 0,
-    normalRatio:
-      toNumber(pickFirst(responseData, ["normal_ratio", "normalRatio", "distribution.normal_ratio"])) || 0,
-    abnormalRatio:
-      toNumber(pickFirst(responseData, ["abnormal_ratio", "abnormalRatio", "distribution.abnormal_ratio"])) || 0,
-    normalCount:
-      toNumber(pickFirst(responseData, ["normal_count", "normalCount", "distribution.normal_count"])) || 0,
-    comparisonItems: comparisonSource.map(function mapItem(item, index) {
-      const measurementCount =
-        toNumber(pickFirst(item, ["measurement_count", "measurementCount", "count"])) || 0;
-      const abnormalCount =
-        toNumber(pickFirst(item, ["abnormal_count", "abnormalCount", "warning_count"])) || 0;
-
-      return {
-        id: String(pickFirst(item, ["id", "metric_key", "name"], `measurement-${index + 1}`)),
-        name: pickFirst(item, ["name", "metric_label", "metric_name", "label"], "-"),
-        measurementCount,
-        abnormalCount,
       };
     }),
   };
