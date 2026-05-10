@@ -152,35 +152,68 @@ export function normalizeServiceOverviewPopup(responseData, fallbackCenterOption
 
 export function normalizeFollowUpPopup(responseData, fallbackCenterOptions, fallbackMetricOptions, fallbackStatusOptions) {
   /**
-   * 重点随访弹窗除了表格数据，还会返回多组筛选项。
-   * keyword 是输入框状态，不属于 options，因此仍由组件自己维护。
+   * 重点随访弹窗已经有真实接口结构，这里按实际返回字段整理。
+   * 当前确认过的字段：
+   * - filters.search_placeholder
+   * - filters.center_options
+   * - filters.metric_options
+   * - filters.status_options
+   * - items
    */
-  const itemsSource = pickArray(responseData, ["items", "list", "rows"]);
+  const filterConfig = responseData?.filters || {};
+  const centerOptions = Array.isArray(filterConfig?.center_options)
+    ? filterConfig.center_options
+    : [];
+  const metricOptions = Array.isArray(filterConfig?.metric_options)
+    ? filterConfig.metric_options
+    : [];
+  const statusOptions = Array.isArray(filterConfig?.status_options)
+    ? filterConfig.status_options
+    : [];
+  const itemsSource = Array.isArray(responseData?.items) ? responseData.items : [];
 
   return {
-    centerOptions: normalizeSelectOptions(
-      responseData,
-      ["center_options", "centerOptions", "filters.center_options", "filters.centers"],
-      fallbackCenterOptions
-    ),
-    metricOptions: normalizeSelectOptions(
-      responseData,
-      ["metric_options", "metricOptions", "filters.metric_options", "filters.metrics"],
-      fallbackMetricOptions
-    ),
-    statusOptions: normalizeSelectOptions(
-      responseData,
-      ["status_options", "statusOptions", "filters.status_options", "filters.statuses"],
-      fallbackStatusOptions
-    ),
+    searchPlaceholder:
+      filterConfig?.search_placeholder || "搜索患者姓名、社区...",
+    centerOptions:
+      centerOptions.length > 0
+        ? centerOptions.map(function mapCenterOption(option, index) {
+            if (typeof option === "string" && option === "全部卫生中心") {
+              return {
+                label: option,
+                value: "",
+              };
+            }
+
+            return formatOption(option, index);
+          })
+        : fallbackCenterOptions.map(formatOption),
+    metricOptions:
+      metricOptions.length > 0
+        ? metricOptions.map(function mapMetricOption(option, index) {
+            return {
+              label: String(option?.label || `选项 ${index + 1}`),
+              value: String(option?.key ?? ""),
+            };
+          })
+        : fallbackMetricOptions.map(formatOption),
+    statusOptions:
+      statusOptions.length > 0
+        ? statusOptions.map(function mapStatusOption(option, index) {
+            return {
+              label: String(option?.label || `选项 ${index + 1}`),
+              value: String(option?.key || option?.label || index + 1),
+            };
+          })
+        : fallbackStatusOptions.map(formatOption),
     items: itemsSource.map(function mapItem(item, index) {
       return {
-        id: String(pickFirst(item, ["id", "follow_up_id"], `follow-up-${index + 1}`)),
-        centerName: pickFirst(item, ["center_name", "centerName", "hospital_name"], "-"),
-        patientName: pickFirst(item, ["patient_name", "patientName"], "-"),
-        metricName: pickFirst(item, ["metric_label", "metric_name", "metricName"], "-"),
-        statusText: pickFirst(item, ["status_text", "statusText", "follow_up_status"], "-"),
-        lastCheckTime: pickFirst(item, ["last_check_time", "lastCheckTime", "time"], "-"),
+        id: String(item?.id || item?.patient_openid || `follow-up-${index + 1}`),
+        centerName: item?.center_name || "-",
+        patientName: item?.patient_name || "-",
+        metricName: item?.metric_name || "-",
+        statusText: item?.status_text || "-",
+        lastCheckTime: item?.last_check_time || "-",
       };
     }),
   };

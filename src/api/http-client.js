@@ -33,7 +33,14 @@ function appendSearchParams(requestUrl, params) {
   const searchParams = new URLSearchParams();
 
   Object.entries(params).forEach(function appendEntry([paramKey, paramValue]) {
-    if (paramValue === undefined || paramValue === null || paramValue === "") {
+    /**
+     * 某些接口要求显式传默认值，例如：
+     * - center_name=""
+     * - risk_level="all"
+     *
+     * 所以这里仅忽略 undefined / null，保留空字符串。
+     */
+    if (paramValue === undefined || paramValue === null) {
       return;
     }
 

@@ -20,9 +20,9 @@ import { normalizeFollowUpPopup } from "@/app/modules/popup-view-model";
 import DialogCloseAction from "./dialog-close-action";
 import DialogHeaderSelect from "./dialog-header-select";
 
-const defaultCenterOptions = [{ label: "全部卫生中心", value: "全部卫生中心" }];
-const defaultMetricOptions = [{ label: "全部项目", value: "全部项目" }];
-const defaultStatusOptions = [{ label: "是否已随访", value: "是否已随访" }];
+const defaultCenterOptions = [{ label: "全部卫生中心", value: "" }];
+const defaultMetricOptions = [{ label: "全部项目", value: "" }];
+const defaultStatusOptions = [{ label: "是否已随访", value: "all" }];
 
 /**
  * 重点随访弹窗本身只处理筛选状态与表格渲染。
@@ -36,6 +36,7 @@ function FollowUpDialog({ open, onOpenChange }) {
   const [dialogState, setDialogState] = useState({
     status: "idle",
     data: {
+      searchPlaceholder: "搜索患者姓名、社区...",
       centerOptions: defaultCenterOptions,
       metricOptions: defaultMetricOptions,
       statusOptions: defaultStatusOptions,
@@ -77,17 +78,19 @@ function FollowUpDialog({ open, onOpenChange }) {
       });
 
       getFollowUpPopup({
-        service_center:
-          selectedCenter === defaultCenterOptions[0].value ? undefined : selectedCenter,
-        keyword: searchKeyword.trim() || undefined,
-        metric:
-          selectedMetric === defaultMetricOptions[0].value
-            ? undefined
-            : selectedMetric,
-        follow_up_status:
-          selectedStatus === defaultStatusOptions[0].value
-            ? undefined
-            : selectedStatus,
+        /**
+         * 这条接口使用的是真实业务字段名：
+         * - center_name
+         * - keyword
+         * - metric
+         * - status
+         *
+         * 默认值也需要显式传递，不能再依赖“不传参数”。
+         */
+        center_name: selectedCenter,
+        keyword: searchKeyword.trim(),
+        metric: selectedMetric,
+        status: selectedStatus,
       })
         .then(function handleSuccess(responseData) {
           if (disposed) {
@@ -147,7 +150,7 @@ function FollowUpDialog({ open, onOpenChange }) {
                 <input
                   type="text"
                   value={searchKeyword}
-                  placeholder="搜索患者姓名、社区..."
+                  placeholder={dialogState.data.searchPlaceholder}
                   onChange={handleSearchKeywordChange}
                   className="h-8 w-[220px] rounded-[10px] border border-[#1D3B7A]/80 bg-[rgba(13,27,56,0.92)] pr-3 pl-9 text-sm text-[#D6E0F5] outline-none placeholder:text-[#6983B3] focus:border-[#2A62A7]"
                 />
