@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   CSS2DObject,
-  CSS2DRenderer,
+  CSS2DRenderer
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { districtBarData } from "./bar-data";
 
@@ -49,8 +49,11 @@ const BAR_RADIUS = 4; // 柱子的粗细，数值越大越粗
 const BAR_RADIAL_SEGMENTS = 16; // 圆柱横截面的分段数，越大越圆滑
 const BAR_TILT_X_DEGREES = -70; // 柱子绕 X 轴的统一倾斜角度，正负决定前后倾斜方向
 const BAR_TILT_Y_DEGREES = 60; // 柱子绕 Y 轴的统一倾斜角度，正负决定左右倾斜方向
-const VALUE_LABEL_HITBOX_HEIGHT = 14; // 数值牌命中层的高度，决定鼠标 hover 的纵向可点范围
-const VALUE_LABEL_HITBOX_DEPTH = 10; // 数值牌命中层的厚度，给倾斜视角留出 hover 空间
+const VALUE_LABEL_HITBOX_HEIGHT = 22; // 数值牌命中层的高度，决定鼠标 hover 的纵向可点范围
+const VALUE_LABEL_HITBOX_DEPTH = 18; // 数值牌命中层的厚度，给倾斜视角留出 hover 空间
+const VALUE_LABEL_HITBOX_WIDTH_PADDING = 36; // 数值牌命中层额外加宽，提升边缘 hover 容错
+const BAR_HIT_RADIUS = 18; // 柱子透明命中层的半径，只影响 hover，不影响视觉粗细
+const BAR_HIT_HEIGHT_PADDING = 18; // 柱子透明命中层额外补高，提升顶部和底部 hover 容错
 const VALUE_LABEL_OFFSET_X = -20; // 数值牌沿 X 轴的偏移量
 const VALUE_LABEL_OFFSET_Y = -20; // 数值牌沿 Y 轴的偏移量，负值会更贴近参考图里的柱身下方
 const VALUE_LABEL_MIN_OFFSET_Z = 18; // 数值牌距离板块顶部的最小高度
@@ -69,7 +72,7 @@ const BAR_NORMAL_STYLE = {
   valueBackground: "rgba(11, 43, 82, 0.94)",
   nameTextColor: "#A8F6FF",
   nameBorderColor: "rgba(93, 233, 255, 0.82)",
-  nameBackground: "rgba(8, 49, 86, 0.74)",
+  nameBackground: "rgba(8, 49, 86, 0.74)"
 };
 
 const BAR_WARNING_STYLE = {
@@ -80,7 +83,7 @@ const BAR_WARNING_STYLE = {
   valueBackground: "rgba(73, 56, 9, 0.94)",
   nameTextColor: "#FFE680",
   nameBorderColor: "rgba(255, 211, 77, 0.82)",
-  nameBackground: "rgba(88, 65, 8, 0.74)",
+  nameBackground: "rgba(88, 65, 8, 0.74)"
 };
 
 const BAR_DANGER_STYLE = {
@@ -91,7 +94,7 @@ const BAR_DANGER_STYLE = {
   valueBackground: "rgba(72, 9, 17, 0.94)",
   nameTextColor: "#FF6670",
   nameBorderColor: "rgba(255, 78, 88, 0.84)",
-  nameBackground: "rgba(88, 8, 19, 0.74)",
+  nameBackground: "rgba(88, 8, 19, 0.74)"
 };
 
 /**
@@ -114,7 +117,7 @@ const MAP_ROTATION_DEGREES = 30;
  * - CAMERA_TILT_DEGREES: 镜头抬高多少，也就是你说的倾斜度
  * - CAMERA_DISTANCE_MULTIPLIER: 镜头离地图有多远
  * - CAMERA_TARGET_Z_MULTIPLIER: 镜头默认看向地图高度的哪个位置
- */ 
+ */
 const CAMERA_AZIMUTH_DEGREES = -113.72;
 const CAMERA_TILT_DEGREES = 68.25;
 const CAMERA_DISTANCE_MULTIPLIER = 1.387;
@@ -235,7 +238,7 @@ function collectBounds(featureCollection) {
   return {
     center: [(minLon + maxLon) / 2, (minLat + maxLat) / 2],
     lonSpan: maxLon - minLon,
-    latSpan: maxLat - minLat,
+    latSpan: maxLat - minLat
   };
 }
 
@@ -251,13 +254,13 @@ function createRingLine(ring, height) {
   const lineMaterial = new THREE.LineBasicMaterial({
     color: BOUNDARY_LINE_COLOR,
     transparent: true,
-    opacity: 0.95,
+    opacity: 0.95
   });
   const line = new THREE.LineLoop(lineGeometry, lineMaterial);
 
   return {
     line,
-    material: lineMaterial,
+    material: lineMaterial
   };
 }
 
@@ -365,7 +368,7 @@ function createFeatureLabel(featureName, labelPosition, height) {
 
   return {
     labelObject,
-    labelElement,
+    labelElement
   };
 }
 
@@ -398,7 +401,7 @@ function createValueLabel(metricValue, labelPosition, height, style) {
 
   return {
     labelObject,
-    labelElement,
+    labelElement
   };
 }
 
@@ -424,7 +427,7 @@ function createBarNameLabel(name, labelPosition, height, style) {
 
   return {
     labelObject,
-    labelElement,
+    labelElement
   };
 }
 
@@ -434,7 +437,10 @@ function createValueLabelHitMesh(metricValue, labelPosition, height, barIndex) {
    * 这里在它后面补一个透明命中盒，让鼠标移到数字牌区域时也能触发柱子 hover。
    */
   const labelText = metricValue.toLocaleString("zh-CN");
-  const hitboxWidth = Math.max(44, labelText.length * 12 + 20);
+  const hitboxWidth = Math.max(
+    64,
+    labelText.length * 12 + VALUE_LABEL_HITBOX_WIDTH_PADDING
+  );
   const hitboxGeometry = new THREE.BoxGeometry(
     hitboxWidth,
     VALUE_LABEL_HITBOX_HEIGHT,
@@ -444,17 +450,49 @@ function createValueLabelHitMesh(metricValue, labelPosition, height, barIndex) {
     color: "#ffffff",
     transparent: true,
     opacity: 0,
-    depthWrite: false,
+    depthWrite: false
   });
   const hitboxMesh = new THREE.Mesh(hitboxGeometry, hitboxMaterial);
 
   hitboxMesh.position.set(labelPosition.x, labelPosition.y, height);
   hitboxMesh.userData = {
     hoverKind: "bar",
-    barIndex,
+    barIndex
   };
 
   return hitboxMesh;
+}
+
+function createBarHitMesh(barPosition, barHeight, barIndex) {
+  /**
+   * 细柱子在倾斜视角下可命中面积比较小。
+   * 这里额外补一个透明圆柱命中层，专门提升 hover 手感，不参与视觉展示。
+   */
+  const hitMeshGeometry = new THREE.CylinderGeometry(
+    BAR_HIT_RADIUS,
+    BAR_HIT_RADIUS,
+    barHeight + BAR_HIT_HEIGHT_PADDING,
+    20
+  );
+  hitMeshGeometry.rotateX(Math.PI / 2);
+
+  const hitMeshMaterial = new THREE.MeshBasicMaterial({
+    color: "#ffffff",
+    transparent: true,
+    opacity: 0,
+    depthWrite: false
+  });
+  const hitMesh = new THREE.Mesh(hitMeshGeometry, hitMeshMaterial);
+
+  hitMesh.position.copy(barPosition);
+  hitMesh.rotation.x = THREE.MathUtils.degToRad(BAR_TILT_X_DEGREES);
+  hitMesh.rotation.y = THREE.MathUtils.degToRad(BAR_TILT_Y_DEGREES);
+  hitMesh.userData = {
+    hoverKind: "bar",
+    barIndex
+  };
+
+  return hitMesh;
 }
 
 /**
@@ -501,7 +539,7 @@ function getCurrentViewConfig(camera, controls, maxSpan, mapRotationRadians) {
       ).toFixed(2)
     ),
     cameraDistanceMultiplier: Number((cameraDistance / maxSpan).toFixed(3)),
-    cameraTargetZMultiplier: Number((controls.target.z / maxSpan).toFixed(3)),
+    cameraTargetZMultiplier: Number((controls.target.z / maxSpan).toFixed(3))
   };
 }
 
@@ -511,7 +549,7 @@ function formatViewConfigText(viewConfig) {
     `CAMERA_AZIMUTH_DEGREES = ${viewConfig.cameraAzimuthDegrees}`,
     `CAMERA_TILT_DEGREES = ${viewConfig.cameraTiltDegrees}`,
     `CAMERA_DISTANCE_MULTIPLIER = ${viewConfig.cameraDistanceMultiplier}`,
-    `CAMERA_TARGET_Z_MULTIPLIER = ${viewConfig.cameraTargetZMultiplier}`,
+    `CAMERA_TARGET_Z_MULTIPLIER = ${viewConfig.cameraTargetZMultiplier}`
   ].join("\n");
 }
 
@@ -528,144 +566,146 @@ function buildDistrictMeshes(featureCollection) {
   const featureEntries = [];
   const mapGroup = new THREE.Group();
 
-  featureCollection.features.forEach(function buildFeature(feature, featureIndex) {
-    const polygons = getGeometryPolygons(feature);
-    const topFaceColor = new THREE.Color(TOP_FACE_COLOR);
-    const sideFaceColor = new THREE.Color(SIDE_FACE_COLOR);
-    const featureHeight = BLOCK_HEIGHT;
-    const featureName = feature.properties?.name || `区域 ${featureIndex + 1}`;
-    const meshes = [];
-    const outlineMaterials = [];
-    let labelAnchorPoint = null;
-    let largestPolygonArea = 0;
+  featureCollection.features.forEach(
+    function buildFeature(feature, featureIndex) {
+      const polygons = getGeometryPolygons(feature);
+      const topFaceColor = new THREE.Color(TOP_FACE_COLOR);
+      const sideFaceColor = new THREE.Color(SIDE_FACE_COLOR);
+      const featureHeight = BLOCK_HEIGHT;
+      const featureName =
+        feature.properties?.name || `区域 ${featureIndex + 1}`;
+      const meshes = [];
+      const outlineMaterials = [];
+      let labelAnchorPoint = null;
+      let largestPolygonArea = 0;
 
-    polygons.forEach(function buildPolygon(polygon) {
-      const outerRing = normalizeRing(
-        polygon[0] || [],
-        bounds.center,
-        scale,
-        true
-      );
-
-      if (!outerRing) {
-        return;
-      }
-
-      const shape = new THREE.Shape(outerRing);
-      const outerRingArea = getRingArea(outerRing);
-
-      if (outerRingArea > largestPolygonArea) {
-        largestPolygonArea = outerRingArea;
-        labelAnchorPoint = getRingCenter(outerRing);
-      }
-
-      polygon.slice(1).forEach(function buildHole(holeRing) {
-        const normalizedHole = normalizeRing(
-          holeRing,
+      polygons.forEach(function buildPolygon(polygon) {
+        const outerRing = normalizeRing(
+          polygon[0] || [],
           bounds.center,
           scale,
-          false
+          true
         );
 
-        if (!normalizedHole) {
+        if (!outerRing) {
           return;
         }
 
-        const holePath = new THREE.Path(normalizedHole);
-        shape.holes.push(holePath);
-      });
+        const shape = new THREE.Shape(outerRing);
+        const outerRingArea = getRingArea(outerRing);
 
-      const geometry = new THREE.ExtrudeGeometry(shape, {
-        depth: featureHeight,
-        bevelEnabled: false,
-        curveSegments: 2,
+        if (outerRingArea > largestPolygonArea) {
+          largestPolygonArea = outerRingArea;
+          labelAnchorPoint = getRingCenter(outerRing);
+        }
+
+        polygon.slice(1).forEach(function buildHole(holeRing) {
+          const normalizedHole = normalizeRing(
+            holeRing,
+            bounds.center,
+            scale,
+            false
+          );
+
+          if (!normalizedHole) {
+            return;
+          }
+
+          const holePath = new THREE.Path(normalizedHole);
+          shape.holes.push(holePath);
+        });
+
+        const geometry = new THREE.ExtrudeGeometry(shape, {
+          depth: featureHeight,
+          bevelEnabled: false,
+          curveSegments: 2
+        });
+
+        /**
+         * ExtrudeGeometry 支持多材质：
+         * - 第一个材质用于顶面/底面
+         * - 第二个材质用于挤出的侧面
+         * 这样就能把顶面和侧面拆成两种颜色。
+         */
+        const topMaterial = new THREE.MeshStandardMaterial({
+          color: topFaceColor.clone(),
+          emissive: topFaceColor.clone().multiplyScalar(TOP_EMISSIVE_STRENGTH),
+          metalness: 0.14,
+          roughness: 0.4
+        });
+        const sideMaterial = new THREE.MeshStandardMaterial({
+          color: sideFaceColor.clone(),
+          emissive: sideFaceColor
+            .clone()
+            .multiplyScalar(SIDE_EMISSIVE_STRENGTH),
+          metalness: 0.08,
+          roughness: 0.52
+        });
+
+        const mesh = new THREE.Mesh(geometry, [topMaterial, sideMaterial]);
+        mesh.userData = {
+          featureIndex,
+          featureName,
+          baseTopColor: topFaceColor.clone(),
+          baseSideColor: sideFaceColor.clone()
+        };
+        mapGroup.add(mesh);
+        meshes.push(mesh);
+
+        /**
+         * 外环边界线就是行政区之间最直接的视觉分隔。
+         * 当相邻板块顶面颜色一致时，这条线能把“板块与板块之间的边”明确打出来。
+         */
+        const outerRingLine = createRingLine(outerRing, featureHeight);
+        mapGroup.add(outerRingLine.line);
+        outlineMaterials.push(outerRingLine.material);
+
+        /**
+         * 如果某个区块内部存在孔洞，也给孔洞边界补线。
+         * 这样地形轮廓会更完整。
+         */
+        polygon.slice(1).forEach(function buildHoleBoundary(holeRing) {
+          const normalizedHole = normalizeRing(
+            holeRing,
+            bounds.center,
+            scale,
+            false
+          );
+
+          if (!normalizedHole) {
+            return;
+          }
+
+          const holeRingLine = createRingLine(normalizedHole, featureHeight);
+          mapGroup.add(holeRingLine.line);
+          outlineMaterials.push(holeRingLine.material);
+        });
       });
 
       /**
-       * ExtrudeGeometry 支持多材质：
-       * - 第一个材质用于顶面/底面
-       * - 第二个材质用于挤出的侧面
-       * 这样就能把顶面和侧面拆成两种颜色。
+       * 每个行政区只放一个标签。
+       * MultiPolygon 的情况下，标签放在面积最大的那块面上。
        */
-      const topMaterial = new THREE.MeshStandardMaterial({
-        color: topFaceColor.clone(),
-        emissive: topFaceColor.clone().multiplyScalar(TOP_EMISSIVE_STRENGTH),
-        metalness: 0.14,
-        roughness: 0.4,
-      });
-      const sideMaterial = new THREE.MeshStandardMaterial({
-        color: sideFaceColor.clone(),
-        emissive: sideFaceColor.clone().multiplyScalar(SIDE_EMISSIVE_STRENGTH),
-        metalness: 0.08,
-        roughness: 0.52,
-      });
+      let labelElement = null;
+      if (labelAnchorPoint) {
+        const { labelObject, labelElement: nextLabelElement } =
+          createFeatureLabel(featureName, labelAnchorPoint, featureHeight);
+        mapGroup.add(labelObject);
+        labelElement = nextLabelElement;
+      }
 
-      const mesh = new THREE.Mesh(geometry, [topMaterial, sideMaterial]);
-      mesh.userData = {
+      featureEntries.push({
         featureIndex,
         featureName,
-        baseTopColor: topFaceColor.clone(),
-        baseSideColor: sideFaceColor.clone(),
-      };
-      mapGroup.add(mesh);
-      meshes.push(mesh);
-
-      /**
-       * 外环边界线就是行政区之间最直接的视觉分隔。
-       * 当相邻板块顶面颜色一致时，这条线能把“板块与板块之间的边”明确打出来。
-       */
-      const outerRingLine = createRingLine(outerRing, featureHeight);
-      mapGroup.add(outerRingLine.line);
-      outlineMaterials.push(outerRingLine.material);
-
-      /**
-       * 如果某个区块内部存在孔洞，也给孔洞边界补线。
-       * 这样地形轮廓会更完整。
-       */
-      polygon.slice(1).forEach(function buildHoleBoundary(holeRing) {
-        const normalizedHole = normalizeRing(
-          holeRing,
-          bounds.center,
-          scale,
-          false
-        );
-
-        if (!normalizedHole) {
-          return;
-        }
-
-        const holeRingLine = createRingLine(normalizedHole, featureHeight);
-        mapGroup.add(holeRingLine.line);
-        outlineMaterials.push(holeRingLine.material);
+        baseTopColor: topFaceColor,
+        baseSideColor: sideFaceColor,
+        height: featureHeight,
+        meshes,
+        outlineMaterials,
+        labelElement
       });
-    });
-
-    /**
-     * 每个行政区只放一个标签。
-     * MultiPolygon 的情况下，标签放在面积最大的那块面上。
-     */
-    let labelElement = null;
-    if (labelAnchorPoint) {
-      const { labelObject, labelElement: nextLabelElement } = createFeatureLabel(
-        featureName,
-        labelAnchorPoint,
-        featureHeight
-      );
-      mapGroup.add(labelObject);
-      labelElement = nextLabelElement;
     }
-
-    featureEntries.push({
-      featureIndex,
-      featureName,
-      baseTopColor: topFaceColor,
-      baseSideColor: sideFaceColor,
-      height: featureHeight,
-      meshes,
-      outlineMaterials,
-      labelElement,
-    });
-  });
+  );
 
   const maxSpan = Math.max(bounds.lonSpan, bounds.latSpan) * scale;
 
@@ -674,7 +714,7 @@ function buildDistrictMeshes(featureCollection) {
     mapGroup,
     featureEntries,
     maxSpan,
-    scale,
+    scale
   };
 }
 
@@ -721,7 +761,7 @@ function buildBarOverlays(barData, bounds, scale) {
       color: barColor.clone(),
       emissive: barColor.clone().multiplyScalar(BAR_EMISSIVE_STRENGTH),
       metalness: 0.08,
-      roughness: 0.32,
+      roughness: 0.32
     });
 
     const barMesh = new THREE.Mesh(barGeometry, barMaterial);
@@ -734,23 +774,23 @@ function buildBarOverlays(barData, bounds, scale) {
     barMesh.rotation.y = THREE.MathUtils.degToRad(BAR_TILT_Y_DEGREES);
     barMesh.userData = {
       hoverKind: "bar",
-      barIndex,
+      barIndex
     };
     barGroup.add(barMesh);
+    const barHitMesh = createBarHitMesh(barMesh.position, barHeight, barIndex);
+    barGroup.add(barHitMesh);
 
-    const {
-      labelObject: valueLabelObject,
-      labelElement: valueLabelElement,
-    } = createValueLabel(
-      metricValue,
-      new THREE.Vector3(
-        projectedAnchorPoint.x + BAR_OFFSET_X + VALUE_LABEL_OFFSET_X,
-        projectedAnchorPoint.y + VALUE_LABEL_OFFSET_Y,
-        0
-      ),
-      valueLabelZ,
-      barStyle
-    );
+    const { labelObject: valueLabelObject, labelElement: valueLabelElement } =
+      createValueLabel(
+        metricValue,
+        new THREE.Vector3(
+          projectedAnchorPoint.x + BAR_OFFSET_X + VALUE_LABEL_OFFSET_X,
+          projectedAnchorPoint.y + VALUE_LABEL_OFFSET_Y,
+          0
+        ),
+        valueLabelZ,
+        barStyle
+      );
     barGroup.add(valueLabelObject);
     const valueLabelHitMesh = createValueLabelHitMesh(
       metricValue,
@@ -764,19 +804,17 @@ function buildBarOverlays(barData, bounds, scale) {
     );
     barGroup.add(valueLabelHitMesh);
 
-    const {
-      labelObject: nameLabelObject,
-      labelElement: nameLabelElement,
-    } = createBarNameLabel(
-      barDatum?.name || `点位 ${barIndex + 1}`,
-      new THREE.Vector3(
-        projectedAnchorPoint.x + BAR_OFFSET_X + NAME_LABEL_OFFSET_X,
-        projectedAnchorPoint.y + NAME_LABEL_OFFSET_Y,
-        0
-      ),
-      nameLabelZ,
-      barStyle
-    );
+    const { labelObject: nameLabelObject, labelElement: nameLabelElement } =
+      createBarNameLabel(
+        barDatum?.name || `点位 ${barIndex + 1}`,
+        new THREE.Vector3(
+          projectedAnchorPoint.x + BAR_OFFSET_X + NAME_LABEL_OFFSET_X,
+          projectedAnchorPoint.y + NAME_LABEL_OFFSET_Y,
+          0
+        ),
+        nameLabelZ,
+        barStyle
+      );
     barGroup.add(nameLabelObject);
 
     barEntries.push({
@@ -785,17 +823,18 @@ function buildBarOverlays(barData, bounds, scale) {
       metricValue,
       barHeight,
       barMesh,
+      barHitMesh,
       valueLabelHitMesh,
       valueLabelElement,
       nameLabelElement,
       baseColor: barColor,
-      style: barStyle,
+      style: barStyle
     });
   });
 
   return {
     barEntries,
-    barGroup,
+    barGroup
   };
 }
 
@@ -846,10 +885,12 @@ function setFeatureHighlight(featureEntries, activeFeatureIndex) {
       mesh.position.z = isActive ? 8 : 0;
     });
 
-    featureEntry.outlineMaterials.forEach(function updateLineMaterial(material) {
-      material.color.set(isActive ? "#ffffff" : BOUNDARY_LINE_COLOR);
-      material.opacity = isActive ? 1 : 0.95;
-    });
+    featureEntry.outlineMaterials.forEach(
+      function updateLineMaterial(material) {
+        material.color.set(isActive ? "#ffffff" : BOUNDARY_LINE_COLOR);
+        material.opacity = isActive ? 1 : 0.95;
+      }
+    );
 
     if (featureEntry.labelElement) {
       featureEntry.labelElement.style.color = "#ffffff";
@@ -862,7 +903,9 @@ function setBarHighlight(barEntries, activeBarIndex) {
   barEntries.forEach(function updateBarEntry(barEntry) {
     const isActive = barEntry.barIndex === activeBarIndex;
     const nextBarColor = isActive
-      ? barEntry.baseColor.clone().lerp(new THREE.Color(HOVER_BLEND_COLOR), 0.22)
+      ? barEntry.baseColor
+          .clone()
+          .lerp(new THREE.Color(HOVER_BLEND_COLOR), 0.22)
       : barEntry.baseColor;
 
     barEntry.barMesh.material.color.copy(nextBarColor);
@@ -908,421 +951,432 @@ function ThreeBlockMap({
   showInfoPanel = true,
   showViewDebugPanel = SHOW_VIEW_DEBUG_PANEL,
   enableCameraDrag = ENABLE_CAMERA_DRAG,
-  logViewConfigToConsole = LOG_VIEW_CONFIG_TO_CONSOLE,
+  logViewConfigToConsole = LOG_VIEW_CONFIG_TO_CONSOLE
 }) {
   const containerRef = useRef(null);
   const infoRef = useRef(null);
   const tooltipRef = useRef(null);
-  const tooltipNameRef = useRef(null);
-  const tooltipValueRef = useRef(null);
-  const tooltipHeightRef = useRef(null);
   const viewDebugRef = useRef(null);
+  const [tooltipData, setTooltipData] = useState({
+    visible: false,
+    name: "区块名称",
+    value: "-",
+    metricColor: BAR_NORMAL_STYLE.valueTextColor
+  });
 
-  useEffect(function initThreeMapEffect() {
-    const containerElement = containerRef.current;
+  useEffect(
+    function initThreeMapEffect() {
+      const containerElement = containerRef.current;
 
-    if (!containerElement) {
-      return;
-    }
-
-    let animationFrameId = 0;
-    let disposed = false;
-    let activeFeatureIndex = null;
-    let activeBarIndex = null;
-    let lastViewLogAt = 0;
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
-    const cleanupTasks = [];
-
-    async function initScene() {
-      /**
-       * 这里直接读取 public 下的静态 GeoJSON。
-       * 因为 test 页只是本地实验页，不需要再抽一层数据请求封装。
-       */
-      const response = await fetch("/json/330100.geojson");
-      const geoJson = await response.json();
-
-      if (disposed) {
+      if (!containerElement) {
         return;
       }
 
-      const { bounds, mapGroup, featureEntries, maxSpan, scale } =
-        buildDistrictMeshes(geoJson);
-      const { barEntries, barGroup } = buildBarOverlays(
-        districtBarData,
-        bounds,
-        scale
-      );
-      /**
-       * 地图整体默认朝向在这里控制。
-       * 改角度时优先改顶部的 MAP_ROTATION_DEGREES，不要直接写死弧度值。
-       */
-      mapGroup.rotation.z = THREE.MathUtils.degToRad(MAP_ROTATION_DEGREES);
-      barGroup.rotation.z = THREE.MathUtils.degToRad(MAP_ROTATION_DEGREES);
-      const meshTargets = [
-        ...featureEntries.flatMap(function flattenFeature(feature) {
-          return feature.meshes;
+      let animationFrameId = 0;
+      let disposed = false;
+      let activeFeatureIndex = null;
+      let activeBarIndex = null;
+      let lastViewLogAt = 0;
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      const cleanupTasks = [];
+
+      async function initScene() {
+        /**
+         * 这里直接读取 public 下的静态 GeoJSON。
+         * 因为 test 页只是本地实验页，不需要再抽一层数据请求封装。
+         */
+        const response = await fetch("/json/330100.geojson");
+        const geoJson = await response.json();
+
+        if (disposed) {
+          return;
+        }
+
+        const { bounds, mapGroup, featureEntries, maxSpan, scale } =
+          buildDistrictMeshes(geoJson);
+        const { barEntries, barGroup } = buildBarOverlays(
+          districtBarData,
+          bounds,
+          scale
+        );
+        /**
+         * 地图整体默认朝向在这里控制。
+         * 改角度时优先改顶部的 MAP_ROTATION_DEGREES，不要直接写死弧度值。
+         */
+        mapGroup.rotation.z = THREE.MathUtils.degToRad(MAP_ROTATION_DEGREES);
+        barGroup.rotation.z = THREE.MathUtils.degToRad(MAP_ROTATION_DEGREES);
+        const meshTargets = [
+          ...featureEntries.flatMap(function flattenFeature(feature) {
+            return feature.meshes;
         }),
         ...barEntries.flatMap(function mapBarEntry(barEntry) {
-          return [barEntry.barMesh, barEntry.valueLabelHitMesh];
-        }),
+          return [barEntry.barMesh, barEntry.barHitMesh, barEntry.valueLabelHitMesh];
+        })
       ];
 
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color("#031525");
-      scene.fog = new THREE.Fog(
-        "#031525",
-        maxSpan * FOG_START_MULTIPLIER,
-        maxSpan * FOG_END_MULTIPLIER
-      );
-
-      /**
-       * 默认展示角度由文件顶部那组 CAMERA_* 常量决定。
-       * 这里不再手写 position 数字，而是根据“旋转角度 + 倾斜度 + 距离”自动换算。
-       */
-      const camera = new THREE.PerspectiveCamera(
-        42,
-        containerElement.clientWidth / containerElement.clientHeight,
-        1,
-        5000
-      );
-      /**
-       * 这张地图的“朝上方向”是 z 轴，不是 OrbitControls 默认理解的 y 轴。
-       * 这里显式切到 z-up，拖拽俯仰才会符合当前地图坐标系。
-       */
-      camera.up.set(0, 0, 1);
-      camera.position.copy(getDefaultCameraPosition(maxSpan));
-
-      /**
-       * 渲染器是 three 的真正画布输出端。
-       * 这里保留抗锯齿和色彩空间设置，让板块边缘和蓝青色系更稳定。
-       */
-      const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true,
-      });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setSize(
-        containerElement.clientWidth,
-        containerElement.clientHeight
-      );
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = RENDERER_EXPOSURE;
-      containerElement.appendChild(renderer.domElement);
-
-      /**
-       * 标签渲染器专门负责区块名称。
-       * 它和 WebGLRenderer 共用同一套相机，但输出的是 DOM。
-       */
-      const labelRenderer = new CSS2DRenderer();
-      labelRenderer.setSize(
-        containerElement.clientWidth,
-        containerElement.clientHeight
-      );
-      labelRenderer.domElement.style.position = "absolute";
-      labelRenderer.domElement.style.top = "0";
-      labelRenderer.domElement.style.left = "0";
-      labelRenderer.domElement.style.pointerEvents = "none";
-      containerElement.appendChild(labelRenderer.domElement);
-
-      /**
-       * 交互控制器：
-       * - 允许用户手动旋转/缩放
-       * - 明确关闭默认自动旋转
-       * - 目标点抬高一点，让镜头视线更贴近地图中部
-       */
-      const controls = new OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.enablePan = false;
-      controls.enableRotate = enableCameraDrag;
-      controls.minDistance = maxSpan * 0.45;
-      controls.maxDistance = maxSpan * 2;
-      controls.minPolarAngle = THREE.MathUtils.degToRad(
-        CAMERA_MIN_POLAR_DEGREES
-      );
-      controls.maxPolarAngle = THREE.MathUtils.degToRad(
-        CAMERA_MAX_POLAR_DEGREES
-      );
-      controls.target.set(0, 0, maxSpan * CAMERA_TARGET_Z_MULTIPLIER);
-      controls.autoRotate = false;
-
-      function syncViewDebug(forceConsoleLog = false) {
-        const viewConfig = getCurrentViewConfig(
-          camera,
-          controls,
-          maxSpan,
-          mapGroup.rotation.z
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color("#031525");
+        scene.fog = new THREE.Fog(
+          "#031525",
+          maxSpan * FOG_START_MULTIPLIER,
+          maxSpan * FOG_END_MULTIPLIER
         );
-        const viewConfigText = formatViewConfigText(viewConfig);
 
-        if (showViewDebugPanel && viewDebugRef.current) {
-          viewDebugRef.current.textContent = viewConfigText;
-        }
-
-        if (!logViewConfigToConsole) {
-          return;
-        }
-
-        const now = Date.now();
-        if (!forceConsoleLog && now - lastViewLogAt < 120) {
-          return;
-        }
-
-        lastViewLogAt = now;
-        console.info("[ThreeMapView]", viewConfig);
-      }
-
-      /**
-       * 三组光源分别负责：
-       * - ambient: 整体补光
-       * - directional: 主光，决定顶面层次
-       * - rimLight: 侧边轮廓光，让侧面青色更明显
-       */
-      const ambientLight = new THREE.AmbientLight("#7dd3fc", 1.8);
-      const directionalLight = new THREE.DirectionalLight("#ffffff", 1.6);
-      directionalLight.position.set(-260, -320, 480);
-      const rimLight = new THREE.DirectionalLight("#60a5fa", 1.1);
-      rimLight.position.set(260, 200, 240);
-
-      /**
-       * 地图下方的底板只是为了给悬浮出来的板块一个承托面。
-       * 它不参与 hover 命中。
-       */
-      const plane = new THREE.Mesh(
-        new THREE.PlaneGeometry(maxSpan * 1.75, maxSpan * 1.75),
-        new THREE.MeshBasicMaterial({
-          color: "#07203b",
-          transparent: true,
-          opacity: 0.55,
-        })
-      );
-      plane.position.z = -8;
-
-      scene.add(ambientLight);
-      scene.add(directionalLight);
-      scene.add(rimLight);
-      scene.add(plane);
-      scene.add(mapGroup);
-      scene.add(barGroup);
-      syncViewDebug(true);
-
-      function handleResize() {
         /**
-         * 容器尺寸变化时，同时更新相机宽高比和 renderer 大小。
-         * 否则画面会拉伸。
+         * 默认展示角度由文件顶部那组 CAMERA_* 常量决定。
+         * 这里不再手写 position 数字，而是根据“旋转角度 + 倾斜度 + 距离”自动换算。
          */
-        const nextWidth = containerElement.clientWidth;
-        const nextHeight = containerElement.clientHeight;
-
-        if (!nextWidth || !nextHeight) {
-          return;
-        }
-
-        camera.aspect = nextWidth / nextHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(nextWidth, nextHeight);
-        labelRenderer.setSize(nextWidth, nextHeight);
-      }
-
-      function updateHoverState(nextHoverTarget) {
+        const camera = new THREE.PerspectiveCamera(
+          42,
+          containerElement.clientWidth / containerElement.clientHeight,
+          1,
+          5000
+        );
         /**
-         * 如果 hover 没变，不做重复更新，避免无意义的材质写入。
+         * 这张地图的“朝上方向”是 z 轴，不是 OrbitControls 默认理解的 y 轴。
+         * 这里显式切到 z-up，拖拽俯仰才会符合当前地图坐标系。
          */
-        const nextFeatureIndex =
-          nextHoverTarget?.kind === "feature" ? nextHoverTarget.index : null;
-        const nextBarIndex =
-          nextHoverTarget?.kind === "bar" ? nextHoverTarget.index : null;
+        camera.up.set(0, 0, 1);
+        camera.position.copy(getDefaultCameraPosition(maxSpan));
 
-        if (
-          activeFeatureIndex === nextFeatureIndex &&
-          activeBarIndex === nextBarIndex
-        ) {
-          return;
+        /**
+         * 渲染器是 three 的真正画布输出端。
+         * 这里保留抗锯齿和色彩空间设置，让板块边缘和蓝青色系更稳定。
+         */
+        const renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          alpha: true
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(
+          containerElement.clientWidth,
+          containerElement.clientHeight
+        );
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = RENDERER_EXPOSURE;
+        containerElement.appendChild(renderer.domElement);
+
+        /**
+         * 标签渲染器专门负责区块名称。
+         * 它和 WebGLRenderer 共用同一套相机，但输出的是 DOM。
+         */
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(
+          containerElement.clientWidth,
+          containerElement.clientHeight
+        );
+        labelRenderer.domElement.style.position = "absolute";
+        labelRenderer.domElement.style.top = "0";
+        labelRenderer.domElement.style.left = "0";
+        labelRenderer.domElement.style.pointerEvents = "none";
+        containerElement.appendChild(labelRenderer.domElement);
+
+        /**
+         * 交互控制器：
+         * - 允许用户手动旋转/缩放
+         * - 明确关闭默认自动旋转
+         * - 目标点抬高一点，让镜头视线更贴近地图中部
+         */
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.enablePan = false;
+        controls.enableRotate = enableCameraDrag;
+        controls.minDistance = maxSpan * 0.45;
+        controls.maxDistance = maxSpan * 2;
+        controls.minPolarAngle = THREE.MathUtils.degToRad(
+          CAMERA_MIN_POLAR_DEGREES
+        );
+        controls.maxPolarAngle = THREE.MathUtils.degToRad(
+          CAMERA_MAX_POLAR_DEGREES
+        );
+        controls.target.set(0, 0, maxSpan * CAMERA_TARGET_Z_MULTIPLIER);
+        controls.autoRotate = false;
+
+        function syncViewDebug(forceConsoleLog = false) {
+          const viewConfig = getCurrentViewConfig(
+            camera,
+            controls,
+            maxSpan,
+            mapGroup.rotation.z
+          );
+          const viewConfigText = formatViewConfigText(viewConfig);
+
+          if (showViewDebugPanel && viewDebugRef.current) {
+            viewDebugRef.current.textContent = viewConfigText;
+          }
+
+          if (!logViewConfigToConsole) {
+            return;
+          }
+
+          const now = Date.now();
+          if (!forceConsoleLog && now - lastViewLogAt < 120) {
+            return;
+          }
+
+          lastViewLogAt = now;
+          console.info("[ThreeMapView]", viewConfig);
         }
 
-        activeFeatureIndex = nextFeatureIndex;
-        activeBarIndex = nextBarIndex;
-        setFeatureHighlight(featureEntries, activeFeatureIndex);
-        setBarHighlight(barEntries, activeBarIndex);
+        /**
+         * 三组光源分别负责：
+         * - ambient: 整体补光
+         * - directional: 主光，决定顶面层次
+         * - rimLight: 侧边轮廓光，让侧面青色更明显
+         */
+        const ambientLight = new THREE.AmbientLight("#7dd3fc", 1.8);
+        const directionalLight = new THREE.DirectionalLight("#ffffff", 1.6);
+        directionalLight.position.set(-260, -320, 480);
+        const rimLight = new THREE.DirectionalLight("#60a5fa", 1.1);
+        rimLight.position.set(260, 200, 240);
 
-        if (!infoRef.current) {
-          return;
+        /**
+         * 地图下方的底板只是为了给悬浮出来的板块一个承托面。
+         * 它不参与 hover 命中。
+         */
+        const plane = new THREE.Mesh(
+          new THREE.PlaneGeometry(maxSpan * 1.75, maxSpan * 1.75),
+          new THREE.MeshBasicMaterial({
+            color: "#07203b",
+            transparent: true,
+            opacity: 0.55
+          })
+        );
+        plane.position.z = -8;
+
+        scene.add(ambientLight);
+        scene.add(directionalLight);
+        scene.add(rimLight);
+        scene.add(plane);
+        scene.add(mapGroup);
+        scene.add(barGroup);
+        syncViewDebug(true);
+
+        function handleResize() {
+          /**
+           * 容器尺寸变化时，同时更新相机宽高比和 renderer 大小。
+           * 否则画面会拉伸。
+           */
+          const nextWidth = containerElement.clientWidth;
+          const nextHeight = containerElement.clientHeight;
+
+          if (!nextWidth || !nextHeight) {
+            return;
+          }
+
+          camera.aspect = nextWidth / nextHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(nextWidth, nextHeight);
+          labelRenderer.setSize(nextWidth, nextHeight);
         }
+
+        function updateHoverState(nextHoverTarget) {
+          /**
+           * 如果 hover 没变，不做重复更新，避免无意义的材质写入。
+           */
+          const nextFeatureIndex =
+            nextHoverTarget?.kind === "feature" ? nextHoverTarget.index : null;
+          const nextBarIndex =
+            nextHoverTarget?.kind === "bar" ? nextHoverTarget.index : null;
+
+          if (
+            activeFeatureIndex === nextFeatureIndex &&
+            activeBarIndex === nextBarIndex
+          ) {
+            return;
+          }
+
+          activeFeatureIndex = nextFeatureIndex;
+          activeBarIndex = nextBarIndex;
+          setFeatureHighlight(featureEntries, activeFeatureIndex);
+          setBarHighlight(barEntries, activeBarIndex);
+
+          if (!infoRef.current) {
+            return;
+          }
 
         if (activeBarIndex === null) {
           infoRef.current.textContent = "悬停柱子查看点位详情";
-          if (tooltipRef.current) {
-            tooltipRef.current.style.opacity = "0";
-          }
+          setTooltipData(function hideTooltip(previousTooltipData) {
+            if (!previousTooltipData.visible) {
+              return previousTooltipData;
+            }
+
+            return {
+              ...previousTooltipData,
+              visible: false
+            };
+          });
           return;
         }
 
-        const activeBar =
-          activeBarIndex === null
-            ? null
-            : barEntries.find(function findBarEntry(barEntry) {
-                return barEntry.barIndex === activeBarIndex;
-              });
+          const activeBar =
+            activeBarIndex === null
+              ? null
+              : barEntries.find(function findBarEntry(barEntry) {
+                  return barEntry.barIndex === activeBarIndex;
+                });
 
         infoRef.current.textContent = activeBar
           ? `${activeBar.name} · 数值 ${activeBar.metricValue.toLocaleString("zh-CN")}`
           : "悬停柱子查看点位详情";
 
-        if (
-          activeBar &&
-          tooltipRef.current &&
-          tooltipNameRef.current &&
-          tooltipValueRef.current &&
-          tooltipHeightRef.current
-        ) {
-          tooltipNameRef.current.textContent = activeBar
-            ? activeBar.name
-            : "";
-          tooltipValueRef.current.textContent = activeBar
-            ? activeBar.metricValue.toLocaleString("zh-CN")
-            : "-";
-          tooltipHeightRef.current.textContent = activeBar
-            ? `${Math.round(activeBar.barHeight)}`
-            : "-";
-          tooltipRef.current.style.opacity = "1";
-        }
-      }
-
-      function updateTooltipPosition(event) {
-        if (!tooltipRef.current) {
+        if (!activeBar) {
           return;
         }
 
-        const containerRect = containerElement.getBoundingClientRect();
-        tooltipRef.current.style.left = `${event.clientX - containerRect.left + TOOLTIP_OFFSET_X}px`;
-        tooltipRef.current.style.top = `${event.clientY - containerRect.top + TOOLTIP_OFFSET_Y}px`;
+        setTooltipData({
+          visible: true,
+          name: activeBar.name,
+          value: activeBar.metricValue.toLocaleString("zh-CN"),
+          metricColor: activeBar.style.valueTextColor
+        });
       }
 
-      function handlePointerMove(event) {
-        /**
-         * 把屏幕坐标换算成 three 的标准化设备坐标，再做射线检测。
-         * 命中的 mesh 上已经带了 featureIndex，所以可以直接反查区块。
-         */
-        const rect = renderer.domElement.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        function updateTooltipPosition(event) {
+          if (!tooltipRef.current) {
+            return;
+          }
 
-        raycaster.setFromCamera(pointer, camera);
-        const intersections = raycaster.intersectObjects(meshTargets, false);
-        const intersectionObject = intersections[0]?.object;
-        const nextHoverTarget =
-          intersectionObject?.userData?.hoverKind === "bar"
-            ? {
-                kind: "bar",
-                index: intersectionObject.userData.barIndex,
-              }
-            : intersectionObject
-              ? {
-                  kind: "feature",
-                  index: intersectionObject.userData.featureIndex,
-                }
-              : null;
-
-        updateHoverState(nextHoverTarget);
-
-        if (nextHoverTarget?.kind === "bar") {
-          updateTooltipPosition(event);
+          const containerRect = containerElement.getBoundingClientRect();
+          tooltipRef.current.style.left = `${event.clientX - containerRect.left + TOOLTIP_OFFSET_X}px`;
+          tooltipRef.current.style.top = `${event.clientY - containerRect.top + TOOLTIP_OFFSET_Y}px`;
         }
-      }
+
+        function handlePointerMove(event) {
+          /**
+           * 把屏幕坐标换算成 three 的标准化设备坐标，再做射线检测。
+           * 命中的 mesh 上已经带了 featureIndex，所以可以直接反查区块。
+           */
+          const rect = renderer.domElement.getBoundingClientRect();
+          pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+          raycaster.setFromCamera(pointer, camera);
+          const intersections = raycaster.intersectObjects(meshTargets, false);
+          const intersectionObject = intersections[0]?.object;
+          const nextHoverTarget =
+            intersectionObject?.userData?.hoverKind === "bar"
+              ? {
+                  kind: "bar",
+                  index: intersectionObject.userData.barIndex
+                }
+              : intersectionObject
+                ? {
+                    kind: "feature",
+                    index: intersectionObject.userData.featureIndex
+                  }
+                : null;
+
+          updateHoverState(nextHoverTarget);
+
+          if (nextHoverTarget?.kind === "bar") {
+            updateTooltipPosition(event);
+          }
+        }
 
       function handlePointerLeave() {
         updateHoverState(null);
-        if (tooltipRef.current) {
-          tooltipRef.current.style.opacity = "0";
-        }
       }
 
-      const resizeObserver = new ResizeObserver(handleResize);
-      resizeObserver.observe(containerElement);
-      cleanupTasks.push(function cleanupResizeObserver() {
-        resizeObserver.disconnect();
-      });
-
-      renderer.domElement.addEventListener("pointermove", handlePointerMove);
-      renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
-      cleanupTasks.push(function cleanupPointerEvents() {
-        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
-        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
-      });
-
-      function handleControlsEnd() {
-        syncViewDebug(true);
-      }
-
-      controls.addEventListener("change", syncViewDebug);
-      controls.addEventListener("end", handleControlsEnd);
-      cleanupTasks.push(function cleanupControlEvents() {
-        controls.removeEventListener("change", syncViewDebug);
-        controls.removeEventListener("end", handleControlsEnd);
-      });
-
-      function renderFrame() {
-        /**
-         * 每一帧只做两件事：
-         * 1. 更新 controls 的阻尼过渡
-         * 2. 渲染场景
-         */
-        if (disposed) {
-          return;
-        }
-
-        animationFrameId = window.requestAnimationFrame(renderFrame);
-        controls.update();
-        renderer.render(scene, camera);
-        labelRenderer.render(scene, camera);
-      }
-
-      renderFrame();
-
-      cleanupTasks.push(function cleanupThreeResources() {
-        /**
-         * three 手动管理资源比较多。
-         * 这里在组件卸载时把动画、controls、geometry、material、renderer 全部清掉。
-         */
-        window.cancelAnimationFrame(animationFrameId);
-        controls.dispose();
-
-        scene.traverse(function disposeNode(node) {
-          if (node.geometry) {
-            node.geometry.dispose();
-          }
-
-          if (Array.isArray(node.material)) {
-            node.material.forEach(function disposeMaterial(material) {
-              material.dispose();
-            });
-          } else if (node.material) {
-            node.material.dispose();
-          }
+        const resizeObserver = new ResizeObserver(handleResize);
+        resizeObserver.observe(containerElement);
+        cleanupTasks.push(function cleanupResizeObserver() {
+          resizeObserver.disconnect();
         });
 
-        renderer.dispose();
-        renderer.domElement.remove();
-        labelRenderer.domElement.remove();
-      });
-    }
+        renderer.domElement.addEventListener("pointermove", handlePointerMove);
+        renderer.domElement.addEventListener(
+          "pointerleave",
+          handlePointerLeave
+        );
+        cleanupTasks.push(function cleanupPointerEvents() {
+          renderer.domElement.removeEventListener(
+            "pointermove",
+            handlePointerMove
+          );
+          renderer.domElement.removeEventListener(
+            "pointerleave",
+            handlePointerLeave
+          );
+        });
 
-    initScene().catch(function handleInitSceneError(error) {
-      console.error("Init Three block map failed", error);
+        function handleControlsEnd() {
+          syncViewDebug(true);
+        }
 
-      if (infoRef.current) {
-        infoRef.current.textContent = "Three.js 地图初始化失败";
+        controls.addEventListener("change", syncViewDebug);
+        controls.addEventListener("end", handleControlsEnd);
+        cleanupTasks.push(function cleanupControlEvents() {
+          controls.removeEventListener("change", syncViewDebug);
+          controls.removeEventListener("end", handleControlsEnd);
+        });
+
+        function renderFrame() {
+          /**
+           * 每一帧只做两件事：
+           * 1. 更新 controls 的阻尼过渡
+           * 2. 渲染场景
+           */
+          if (disposed) {
+            return;
+          }
+
+          animationFrameId = window.requestAnimationFrame(renderFrame);
+          controls.update();
+          renderer.render(scene, camera);
+          labelRenderer.render(scene, camera);
+        }
+
+        renderFrame();
+
+        cleanupTasks.push(function cleanupThreeResources() {
+          /**
+           * three 手动管理资源比较多。
+           * 这里在组件卸载时把动画、controls、geometry、material、renderer 全部清掉。
+           */
+          window.cancelAnimationFrame(animationFrameId);
+          controls.dispose();
+
+          scene.traverse(function disposeNode(node) {
+            if (node.geometry) {
+              node.geometry.dispose();
+            }
+
+            if (Array.isArray(node.material)) {
+              node.material.forEach(function disposeMaterial(material) {
+                material.dispose();
+              });
+            } else if (node.material) {
+              node.material.dispose();
+            }
+          });
+
+          renderer.dispose();
+          renderer.domElement.remove();
+          labelRenderer.domElement.remove();
+        });
       }
-    });
 
-    return function cleanupThreeMapEffect() {
-      disposed = true;
-      cleanupTasks.reverse().forEach(function runCleanup(cleanupTask) {
-        cleanupTask();
+      initScene().catch(function handleInitSceneError(error) {
+        console.error("Init Three block map failed", error);
+
+        if (infoRef.current) {
+          infoRef.current.textContent = "Three.js 地图初始化失败";
+        }
       });
-    };
-  }, [enableCameraDrag, logViewConfigToConsole, showViewDebugPanel]);
+
+      return function cleanupThreeMapEffect() {
+        disposed = true;
+        cleanupTasks.reverse().forEach(function runCleanup(cleanupTask) {
+          cleanupTask();
+        });
+      };
+    },
+    [enableCameraDrag, logViewConfigToConsole, showViewDebugPanel]
+  );
 
   return (
     <section className="relative h-full w-full">
@@ -1352,24 +1406,13 @@ function ThreeBlockMap({
           悬停柱子查看点位详情
         </div>
       )}
-      <div
-        ref={tooltipRef}
-        className="pointer-events-none absolute left-0 top-0 z-20 min-w-[180px] rounded-2xl border border-cyan-300/35 bg-[#061629]/92 px-4 py-3 text-white opacity-0 shadow-[0_0_28px_rgba(96,166,246,0.2)] backdrop-blur transition-opacity">
-        <p className="text-[11px] tracking-[0.24em] text-cyan-200/72">DETAIL</p>
-        <p ref={tooltipNameRef} className="mt-1 text-sm font-semibold text-white">
-          区块名称
-        </p>
-        <div className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-          <span className="text-cyan-100/62">数值</span>
-          <span ref={tooltipValueRef} className="text-right text-cyan-50">
-            -
-          </span>
-          <span className="text-cyan-100/62">板块高度</span>
-          <span ref={tooltipHeightRef} className="text-right text-cyan-50">
-            -
-          </span>
-        </div>
-      </div>
+      <MapDetailTooltipCard
+        containerRef={tooltipRef}
+        name={tooltipData.name}
+        value={tooltipData.value}
+        metricColor={tooltipData.metricColor}
+        className={`pointer-events-none absolute left-0 top-0 z-20 transition-opacity ${tooltipData.visible ? "opacity-100" : "opacity-0"}`}
+      />
       {showViewDebugPanel ? (
         <div className="pointer-events-none absolute bottom-4 left-4 z-10 max-w-[340px] rounded-2xl border border-cyan-400/20 bg-slate-950/60 px-4 py-3 backdrop-blur">
           <p className="text-[11px] tracking-[0.24em] text-cyan-300/72">
@@ -1395,3 +1438,35 @@ function ThreeBlockMap({
 }
 
 export default ThreeBlockMap;
+
+function MapDetailTooltipCard({
+  containerRef,
+  className = "",
+  name = "区块名称",
+  value = "-",
+  metricColor = BAR_NORMAL_STYLE.valueTextColor
+}) {
+  /**
+   * tooltip 内容统一走 React state。
+   * 这里只保留 containerRef 给父层控制浮窗位置，
+   * 不再混用 textContent 和 props 两套数据来源。
+   */
+  return (
+    <div
+      ref={containerRef}
+      className={`min-w-[180px] rounded-sm border border-cyan-300/35 bg-[#061629]/92 px-4 py-3 text-white shadow-[0_0_28px_rgba(96,166,246,0.2)] backdrop-blur ${className}`}>
+      <p className="mt-1 text-sm font-semibold text-white">
+        {name}
+      </p>
+      <div
+        className="mt-2 flex items-center text-sm"
+        style={{ color: metricColor }}>
+        <span>异常数据数量:</span>
+        <span className="text-right">
+          {value}
+        </span>
+        <span>条</span>
+      </div>
+    </div>
+  );
+}

@@ -1,21 +1,33 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect } from "react";
 
+const ThreeBlockMap = dynamic(
+  function loadThreeBlockMap() {
+    return import("@/app/test/three-block-map");
+  },
+  {
+    ssr: false,
+    loading: function renderLoading() {
+      return (
+        <div className="flex h-full items-center justify-center text-sm text-[#9FB5DA]">
+          地图加载中...
+        </div>
+      );
+    },
+  }
+);
+
 /**
- * 首页地图数据先不接入渲染。
+ * 首页地图恢复为 three 地图展示。
  *
- * 目录和职责规划：
- * - 当前组件只负责“首页地图卡片壳子”和地图数据占位提示
- * - 如果接口返回了 map_distribution，先输出到控制台确认真实字段结构
- * - 后续真正接地图时，再单独新增 map view-model 或 map adapter
- * - 不要把 map_distribution 的字段猜测、坐标映射、three 渲染逻辑直接堆回这个文件
- *
- * 这样可以保证地图接入分两步推进：
- * 1. 先验证接口数据到底长什么样
- * 2. 再决定 three 柱子、标签、坐标映射应该放在哪一层
+ * 当前策略：
+ * - 首页继续使用原来的地图卡片壳子
+ * - 卡片内部直接复用 test 页已经验证过的 three 地图组件
+ * - map_distribution 先保留控制台打印，不参与 three 点位渲染
  */
-function MainMap({ dashboardStatus, dashboardError, mapDistribution }) {
+function MainMap({ mapDistribution }) {
   useEffect(
     function logMapDistribution() {
       if (!mapDistribution) {
@@ -23,8 +35,9 @@ function MainMap({ dashboardStatus, dashboardError, mapDistribution }) {
       }
 
       /**
-       * 这里刻意只打印，不做渲染绑定。
-       * 原因是 map_distribution 当前还没有被验证成可直接驱动 three 地图的点位结构。
+       * TODO:
+       * 当前首页地图只恢复原来的 three 展示。
+       * 等 map_distribution 的字段和坐标方案确认后，再接入真实点位数据。
        */
       console.info("[MapDistribution]", mapDistribution);
     },
@@ -51,21 +64,14 @@ function MainMap({ dashboardStatus, dashboardError, mapDistribution }) {
         />
       </div>
 
-      <div className="flex-1 h-0 rounded-[20px] overflow-hidden border border-[#1D3B7A]/55 bg-[#081225]">
-        <div className="flex h-full items-center justify-center px-8 text-center">
-          <div>
-            <p className="text-lg text-white">地图数据待接入</p>
-            <p className="mt-2 text-sm text-[#9FB5DA]">
-              {dashboardStatus === "loading"
-                ? "正在加载地图分布数据..."
-                : dashboardStatus === "error"
-                  ? dashboardError?.message || "地图数据加载失败"
-                  : mapDistribution
-                    ? "已收到 map_distribution，当前已输出到控制台"
-                    : "当前接口未返回可用地图分布数据"}
-            </p>
-          </div>
-        </div>
+      <div className="flex-1 h-0 overflow-hidden rounded-[20px] border border-[#1D3B7A]/55 bg-[#081225]">
+        <ThreeBlockMap
+          showTopOverlay={false}
+          showInfoPanel={false}
+          showViewDebugPanel={false}
+          enableCameraDrag={false}
+          logViewConfigToConsole={false}
+        />
       </div>
     </div>
   );
