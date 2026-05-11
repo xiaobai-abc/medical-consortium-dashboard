@@ -454,43 +454,55 @@ function buildDeviceMonitoring(deviceMonitoring) {
     "list",
   ]);
   const normalizedRankings = rankingsSource.map(function mapRanking(item, index) {
+    const deviceCount =
+      toNumber(
+        pickFirst(item, [
+          "device_count",
+          "devices",
+          "count",
+          "total",
+          "managed_device_count",
+        ])
+      ) || 0;
+
     return {
       id: pickFirst(item, ["id", "hospital_id", "hospitalName"], `ranking-${index + 1}`),
       rank: toNumber(pickFirst(item, ["rank", "sort"])) || index + 1,
       hospitalName: pickFirst(item, ["hospital_name", "hospitalName", "name"], "-"),
-      deviceCount:
-        toNumber(
-          pickFirst(item, [
-            "device_count",
-            "count",
-            "total",
-            "managed_device_count",
-          ])
-        ) || 0,
+      deviceCount,
+      percentage: toNumber(pickFirst(item, ["percentage", "ratio", "rate"])),
     };
   });
   const maxDeviceCount = normalizedRankings.reduce(function getMaxCount(maxCount, item) {
     return Math.max(maxCount, item.deviceCount);
   }, 0);
+  const onlineCount =
+    toNumber(
+      pickFirst(deviceMonitoring, ["online_count", "online_devices", "online"])
+    ) || 0;
+  const offlineCount =
+    toNumber(
+      pickFirst(deviceMonitoring, ["offline_count", "offline_devices", "offline"])
+    ) || 0;
+  const totalCount =
+    toNumber(
+      pickFirst(deviceMonitoring, ["total_count", "device_total", "total_devices"])
+    ) ||
+    onlineCount + offlineCount;
 
   return {
-    onlineCount:
-      toNumber(
-        pickFirst(deviceMonitoring, ["online_count", "online_devices", "online"])
-      ) || 0,
-    offlineCount:
-      toNumber(
-        pickFirst(deviceMonitoring, ["offline_count", "offline_devices", "offline"])
-      ) || 0,
-    totalCount:
-      toNumber(
-        pickFirst(deviceMonitoring, ["total_count", "device_total", "total_devices"])
-      ) || 0,
+    onlineCount,
+    offlineCount,
+    totalCount,
     rankings: normalizedRankings.map(function mapProgress(item) {
       return {
         ...item,
         progress:
-          maxDeviceCount > 0 ? Math.round((item.deviceCount / maxDeviceCount) * 100) : 0,
+          Number.isFinite(item.percentage)
+            ? Math.round(item.percentage)
+            : maxDeviceCount > 0
+              ? Math.round((item.deviceCount / maxDeviceCount) * 100)
+              : 0,
       };
     }),
   };
