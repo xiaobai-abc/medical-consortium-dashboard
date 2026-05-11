@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 const ThreeBlockMap = dynamic(
   function loadThreeBlockMap() {
-    return import("@/app/test/three-block-map");
+    return import("./components/home-three-block-map");
   },
   {
     ssr: false,
@@ -20,11 +20,11 @@ const ThreeBlockMap = dynamic(
 );
 
 /**
- * 首页地图恢复为 three 地图展示。
+ * 首页地图单独使用正式 three 地图组件。
  *
  * 当前策略：
  * - 首页继续使用原来的地图卡片壳子
- * - 卡片内部直接复用 test 页已经验证过的 three 地图组件
+ * - /test 页面保留独立实验版，不再和首页复用同一个组件
  * - map_distribution 先保留控制台打印，不参与 three 点位渲染
  */
 function MainMap({ mapDistribution }) {
