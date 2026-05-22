@@ -527,6 +527,7 @@ function buildDistrictMeshes(featureCollection) {
 function buildBarOverlays(featureEntries, mapDistribution) {
   const barEntries = [];
   const barGroup = new THREE.Group();
+  const baseMarkerZ = BLOCK_HEIGHT + 2;
   const districtItems = Array.isArray(mapDistribution?.hangzhou_districts)
     ? mapDistribution.hangzhou_districts
     : [];
@@ -573,7 +574,7 @@ function buildBarOverlays(featureEntries, mapDistribution) {
     const marker = createReactBarMarkerObject({
       x: projectedAnchorPoint.x + BAR_OFFSET_X,
       y: projectedAnchorPoint.y,
-      z: BLOCK_HEIGHT + 2,
+      z: baseMarkerZ,
       name: barDatum?.name || `点位 ${barIndex + 1}`,
       value: metricValue.toLocaleString("zh-CN"),
       metricValue
@@ -582,9 +583,11 @@ function buildBarOverlays(featureEntries, mapDistribution) {
 
     barEntries.push({
       barIndex,
+      featureIndex: featureEntry.featureIndex,
       name: barDatum?.name || `点位 ${barIndex + 1}`,
       metricValue,
       barHeight,
+      baseMarkerZ,
       markerElement: marker.markerElement,
       markerObject: marker.markerObject,
       style: barStyle
@@ -680,6 +683,29 @@ function animateFeatureLift(featureEntries, deltaSeconds) {
           ? targetLiftZ
           : nextLiftZ;
     });
+  });
+}
+
+function syncBarMarkerLift(barEntries, featureEntries) {
+  /**
+   * 板块 hover 时，点位和板块一起抬起。
+   * marker 自己不做独立动画，直接读取所属板块当前的 z 偏移，
+   * 这样可以保证点位和板块始终贴在一起，不会出现一边升起一边留在原地。
+   */
+  const featureLiftMap = new Map(
+    featureEntries.map(function mapFeatureLift(featureEntry) {
+      return [
+        featureEntry.featureIndex,
+        featureEntry.meshes[0]?.position.z ?? FEATURE_LIFT_IDLE_Z
+      ];
+    })
+  );
+
+  barEntries.forEach(function updateBarMarkerLift(barEntry) {
+    const featureLiftZ =
+      featureLiftMap.get(barEntry.featureIndex) ?? FEATURE_LIFT_IDLE_Z;
+
+    barEntry.markerObject.position.z = barEntry.baseMarkerZ + featureLiftZ;
   });
 }
 
@@ -973,7 +999,11 @@ function ThreeBlockMap({
            * 如果 hover 没变，不做重复更新，避免无意义的材质写入。
            */
           const nextFeatureIndex =
-            nextHoverTarget?.kind === "feature" ? nextHoverTarget.index : null;
+            nextHoverTarget?.kind === "feature"
+              ? nextHoverTarget.index
+              : nextHoverTarget?.kind === "bar"
+                ? nextHoverTarget.featureIndex
+                : null;
           const nextBarIndex =
             nextHoverTarget?.kind === "bar" ? nextHoverTarget.index : null;
 
@@ -1044,7 +1074,8 @@ function ThreeBlockMap({
         function handleBarPointerEnter(barEntry, event) {
           updateHoverState({
             kind: "bar",
-            index: barEntry.barIndex
+            index: barEntry.barIndex,
+            featureIndex: barEntry.featureIndex
           });
           updateTooltipPosition(event);
         }
@@ -1052,7 +1083,8 @@ function ThreeBlockMap({
         function handleBarPointerMove(barEntry, event) {
           updateHoverState({
             kind: "bar",
-            index: barEntry.barIndex
+            index: barEntry.barIndex,
+            featureIndex: barEntry.featureIndex
           });
           updateTooltipPosition(event);
         }
@@ -1121,7 +1153,19 @@ function ThreeBlockMap({
           updateHoverState(nextHoverTarget);
         }
 
-        function handlePointerLeave() {
+        function handlePointerLeave(event) {
+          /**
+           * 鼠标从 WebGL 画布移动到 CSS2D 点位元素时，renderer 会先收到 pointerleave。
+           * 这里不要立刻清空 hover，而是允许点位元素接管状态，
+           * 避免出现“板块先降下去，移到点位上又重新升起”的闪烁。
+           */
+          if (
+            event?.relatedTarget instanceof Node &&
+            labelRenderer.domElement.contains(event.relatedTarget)
+          ) {
+            return;
+          }
+
           updateHoverState(null);
         }
 
@@ -1173,6 +1217,7 @@ function ThreeBlockMap({
           animationFrameId = window.requestAnimationFrame(renderFrame);
           animationTimer.update(timestamp);
           animateFeatureLift(featureEntries, animationTimer.getDelta());
+          syncBarMarkerLift(barEntries, featureEntries);
           controls.update();
           updateBarMarkerScale(
             barEntries,
