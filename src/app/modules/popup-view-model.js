@@ -141,11 +141,16 @@ export function normalizeServiceOverviewPopup(responseData, fallbackCenterOption
         : fallbackRiskOptions.map(formatOption),
     items: itemsSource.map(function mapItem(item, index) {
       return {
-        id: String(item?.center_id || item?.center_name || `service-${index + 1}`),
-        centerName: item?.center_name || "-",
-        serviceCount: toNumber(item?.service_count) || 0,
-        abnormalCount: toNumber(item?.abnormal_count) || 0,
-        riskLevel: item?.risk_level_label || item?.risk_level || "-",
+        id: String(item?.id || item?.center_id || item?.center_name || `service-${index + 1}`),
+        centerName: item?.center_name || item?.centerName || "-",
+        serviceCount: toNumber(item?.service_count ?? item?.serviceCount) || 0,
+        abnormalCount: toNumber(item?.abnormal_count ?? item?.abnormalCount) || 0,
+        riskLevel:
+          item?.risk_level_text ||
+          item?.risk_level_label ||
+          item?.riskLevel ||
+          item?.risk_level ||
+          "-",
         riskLevelColor: item?.risk_level_color || "#E8F0FF",
       };
     }),

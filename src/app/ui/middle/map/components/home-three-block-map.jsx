@@ -7,7 +7,6 @@ import {
   CSS2DObject,
   CSS2DRenderer
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
-import { districtBarData } from "./home-bar-data";
 import {
   BAR_NORMAL_STYLE,
   MapDetailTooltipCard,
@@ -50,8 +49,10 @@ const BLOCK_HEIGHT = 40;
 const BAR_MAX_HEIGHT = 128; // 柱子的最大高度，数值越大，最高柱子越长
 const BAR_MIN_HEIGHT = 72; // 柱子的最小高度，避免低值柱子太短看不见
 const BAR_OFFSET_X = 0; // 柱子整体沿 X 轴的偏移量
-const BAR_OVERLAP_DISTANCE = 54; // 两个点位小于这个距离时，认为需要做错位展开
-const BAR_OVERLAP_RADIUS = 26; // 同一簇点位展开时的基础半径
+const BAR_MARKER_MIN_SCALE = 0.72;
+const BAR_MARKER_MAX_SCALE = 1.18;
+const BAR_MARKER_SCALE_POWER = 0.72;
+const BAR_MARKER_SCALE_EPSILON = 0.01;
 
 /**
  * hover 浮窗的鼠标偏移，避免浮窗直接挡在光标下面。
@@ -80,7 +81,8 @@ const CAMERA_DISTANCE_MULTIPLIER = 1.387;
 const CAMERA_TARGET_Z_MULTIPLIER = 0.08;
 const CAMERA_MIN_POLAR_DEGREES = 20;
 const CAMERA_MAX_POLAR_DEGREES = 82;
-const ENABLE_CAMERA_DRAG = true; // 是否允许鼠标拖动旋转视角
+const ENABLE_CAMERA_ROTATE = true; // 是否允许鼠标拖动旋转地图视角
+const ENABLE_CAMERA_PAN = false; // 是否允许鼠标拖动平移地图位置
 const SHOW_VIEW_DEBUG_PANEL = true; // 是否显示当前视角参数面板，方便回填默认值
 const LOG_VIEW_CONFIG_TO_CONSOLE = true; // 是否在视角变化时把当前参数打印到控制台
 
@@ -88,6 +90,10 @@ const LOG_VIEW_CONFIG_TO_CONSOLE = true; // 是否在视角变化时把当前参
  * 悬停高亮时统一往白色方向提亮一点，避免完全变色后丢失原始主题色。
  */
 const HOVER_BLEND_COLOR = "#ffffff";
+const FEATURE_LIFT_IDLE_Z = 0;
+const FEATURE_LIFT_ACTIVE_Z = 8;
+const FEATURE_LIFT_DAMPING = 16;
+const FEATURE_LIFT_EPSILON = 0.01;
 
 /**
  * 标签相对板块顶部再抬高一点，避免名字贴在面上显得拥挤。
@@ -256,34 +262,6 @@ function getRingCenter(ring) {
   return new THREE.Vector3((minX + maxX) / 2, (minY + maxY) / 2, 0);
 }
 
-function getBarMetricValue(barDatum) {
-  const rawMetricValue = Number(barDatum?.value);
-
-  if (Number.isFinite(rawMetricValue)) {
-    return rawMetricValue;
-  }
-
-  return 0;
-}
-
-/**
- * 独立柱条数组统一使用经纬度坐标。
- * 这里把 [经度, 纬度] 投影成当前 three 场景里的平面坐标。
- */
-function resolveProjectedCoordinate(coordinate, center, scale) {
-  if (
-    Array.isArray(coordinate) &&
-    coordinate.length === 2 &&
-    Number.isFinite(coordinate[0]) &&
-    Number.isFinite(coordinate[1])
-  ) {
-    const projectedCoordinate = projectPoint(coordinate, center, scale);
-    return new THREE.Vector3(projectedCoordinate.x, projectedCoordinate.y, 0);
-  }
-
-  return null;
-}
-
 /**
  * 区块名称标签使用 CSS2DObject。
  * 好处是文字始终清晰，不需要自己做 canvas 贴图，也方便以后直接改 DOM 样式。
@@ -310,6 +288,15 @@ function createFeatureLabel(featureName, labelPosition, height) {
     labelObject,
     labelElement
   };
+}
+
+function normalizeDistrictName(name) {
+  return String(name || "").trim();
+}
+
+function toSafeNumber(value, fallback = 0) {
+  const nextValue = Number(value);
+  return Number.isFinite(nextValue) ? nextValue : fallback;
 }
 
 /**
@@ -514,9 +501,11 @@ function buildDistrictMeshes(featureCollection) {
       featureEntries.push({
         featureIndex,
         featureName,
+        labelAnchorPoint,
         baseTopColor: topFaceColor,
         baseSideColor: sideFaceColor,
         height: featureHeight,
+        targetLiftZ: FEATURE_LIFT_IDLE_Z,
         meshes,
         outlineMaterials,
         labelElement
@@ -535,107 +524,44 @@ function buildDistrictMeshes(featureCollection) {
   };
 }
 
-function resolveBarMarkerPositions(projectedPoints) {
-  /**
-   * 多个点位非常接近时，React 标记会直接压在一起。
-   * 这里先按投影后的平面坐标做一个轻量聚类，再把同一簇里的点沿圆周错开。
-   * 原始数据坐标不改，只影响最终展示位置。
-   */
-  const clusters = [];
-
-  projectedPoints.forEach(function placeProjectedPoint(point) {
-    const matchedCluster = clusters.find(function findCluster(cluster) {
-      return cluster.points.some(function isNearClusterPoint(clusterPoint) {
-        return clusterPoint.distanceTo(point) < BAR_OVERLAP_DISTANCE;
-      });
-    });
-
-    if (matchedCluster) {
-      matchedCluster.points.push(point);
-      return;
-    }
-
-    clusters.push({
-      points: [point]
-    });
-  });
-
-  return clusters.flatMap(function mapCluster(cluster) {
-    if (cluster.points.length === 1) {
-      return [
-        {
-          basePoint: cluster.points[0],
-          displayPoint: cluster.points[0].clone()
-        }
-      ];
-    }
-
-    const centerPoint = cluster.points.reduce(
-      function reduceCenter(accumulator, point) {
-        return accumulator.add(point);
-      },
-      new THREE.Vector2(0, 0)
-    ).multiplyScalar(1 / cluster.points.length);
-
-    return cluster.points.map(function mapClusterPoint(point, pointIndex) {
-      const angle = (Math.PI * 2 * pointIndex) / cluster.points.length;
-      const radius =
-        BAR_OVERLAP_RADIUS + Math.max(0, cluster.points.length - 2) * 6;
-
-      return {
-        basePoint: point,
-        displayPoint: new THREE.Vector2(
-          centerPoint.x + Math.cos(angle) * radius,
-          centerPoint.y + Math.sin(angle) * radius
-        )
-      };
-    });
-  });
-}
-
-function buildBarOverlays(barData, bounds, scale) {
+function buildBarOverlays(featureEntries, mapDistribution) {
   const barEntries = [];
   const barGroup = new THREE.Group();
-  const barMetricValues = barData.map(function mapBarMetricValue(item) {
-    return getBarMetricValue(item);
+  const districtItems = Array.isArray(mapDistribution?.hangzhou_districts)
+    ? mapDistribution.hangzhou_districts
+    : [];
+  const districtItemMap = new Map(
+    districtItems.map(function mapDistrictItem(item) {
+      return [normalizeDistrictName(item?.name), item];
+    })
+  );
+  const normalizedBarData = featureEntries.map(function mapFeatureEntry(featureEntry) {
+    const matchedDistrictItem = districtItemMap.get(
+      normalizeDistrictName(featureEntry.featureName)
+    );
+    const metricValue = toSafeNumber(
+      matchedDistrictItem?.value,
+      toSafeNumber(matchedDistrictItem?.height, 0)
+    );
+
+    return {
+      name: featureEntry.featureName,
+      metricValue,
+      featureEntry,
+    };
+  });
+  const barMetricValues = normalizedBarData.map(function mapBarMetricValue(item) {
+    return item.metricValue;
   });
   const maxBarMetricValue = Math.max(...barMetricValues, 1);
-  const projectedBarPoints = [];
 
-  barData.forEach(function collectProjectedBarPoint(barDatum, barIndex) {
-    const projectedAnchorPoint = resolveProjectedCoordinate(
-      barDatum?.coordinate,
-      bounds.center,
-      scale
-    );
+  normalizedBarData.forEach(function buildBarEntry(barDatum, barIndex) {
+    const { featureEntry, metricValue } = barDatum;
+    const projectedAnchorPoint = featureEntry.labelAnchorPoint;
 
     if (!projectedAnchorPoint) {
       return;
     }
-
-    projectedBarPoints.push({
-      barDatum,
-      barIndex,
-      projectedAnchorPoint
-    });
-  });
-
-  const resolvedBarMarkerPositions = resolveBarMarkerPositions(
-    projectedBarPoints.map(function mapProjectedBarPoint(projectedBarPoint) {
-      return projectedBarPoint.projectedAnchorPoint;
-    })
-  );
-
-  projectedBarPoints.forEach(function buildBarEntry(projectedBarPoint) {
-    const { barDatum, barIndex, projectedAnchorPoint } = projectedBarPoint;
-    const metricValue = getBarMetricValue(barDatum);
-    const resolvedMarkerPosition = resolvedBarMarkerPositions.find(
-      function findResolvedBarMarkerPosition(resolvedPosition) {
-        return resolvedPosition.basePoint === projectedAnchorPoint;
-      }
-    );
-    const displayPoint =
-      resolvedMarkerPosition?.displayPoint || projectedAnchorPoint;
 
     const barHeight = getBarHeight(
       metricValue,
@@ -645,8 +571,8 @@ function buildBarOverlays(barData, bounds, scale) {
     );
     const barStyle = getBarVisualStyle(metricValue);
     const marker = createReactBarMarkerObject({
-      x: displayPoint.x + BAR_OFFSET_X,
-      y: displayPoint.y,
+      x: projectedAnchorPoint.x + BAR_OFFSET_X,
+      y: projectedAnchorPoint.y,
       z: BLOCK_HEIGHT + 2,
       name: barDatum?.name || `点位 ${barIndex + 1}`,
       value: metricValue.toLocaleString("zh-CN"),
@@ -714,9 +640,10 @@ function setFeatureHighlight(featureEntries, activeFeatureIndex) {
               .clone()
               .multiplyScalar(SIDE_EMISSIVE_STRENGTH)
       );
-
-      mesh.position.z = isActive ? 8 : 0;
     });
+    featureEntry.targetLiftZ = isActive
+      ? FEATURE_LIFT_ACTIVE_Z
+      : FEATURE_LIFT_IDLE_Z;
 
     featureEntry.outlineMaterials.forEach(
       function updateLineMaterial(material) {
@@ -732,6 +659,66 @@ function setFeatureHighlight(featureEntries, activeFeatureIndex) {
   });
 }
 
+function animateFeatureLift(featureEntries, deltaSeconds) {
+  /**
+   * 标准做法是：交互层只更新 target，渲染循环里做阻尼插值。
+   * 这样动画不会受 pointermove 频率影响，过渡也更稳定。
+   */
+  featureEntries.forEach(function updateFeatureLift(featureEntry) {
+    const targetLiftZ = featureEntry.targetLiftZ ?? FEATURE_LIFT_IDLE_Z;
+
+    featureEntry.meshes.forEach(function updateMeshLift(mesh) {
+      const nextLiftZ = THREE.MathUtils.damp(
+        mesh.position.z,
+        targetLiftZ,
+        FEATURE_LIFT_DAMPING,
+        deltaSeconds
+      );
+
+      mesh.position.z =
+        Math.abs(nextLiftZ - targetLiftZ) < FEATURE_LIFT_EPSILON
+          ? targetLiftZ
+          : nextLiftZ;
+    });
+  });
+}
+
+function getBarMarkerScale(camera, controls, baseCameraDistance) {
+  /**
+   * CSS2DObject 默认保持固定屏幕像素，不会随相机远近透视缩放。
+   * 这里按相机距离补一个温和缩放，让 marker 和地图本体的比例更一致。
+   */
+  const currentCameraDistance = camera.position.distanceTo(controls.target);
+  const rawScale = Math.pow(
+    baseCameraDistance / Math.max(currentCameraDistance, 1),
+    BAR_MARKER_SCALE_POWER
+  );
+
+  return THREE.MathUtils.clamp(
+    rawScale,
+    BAR_MARKER_MIN_SCALE,
+    BAR_MARKER_MAX_SCALE
+  );
+}
+
+function updateBarMarkerScale(barEntries, markerScale) {
+  barEntries.forEach(function updateMarkerScale(barEntry) {
+    if (
+      typeof barEntry.currentMarkerScale === "number" &&
+      Math.abs(barEntry.currentMarkerScale - markerScale) <
+        BAR_MARKER_SCALE_EPSILON
+    ) {
+      return;
+    }
+
+    barEntry.currentMarkerScale = markerScale;
+    barEntry.markerElement.style.setProperty(
+      "--map-marker-scale",
+      markerScale.toFixed(3)
+    );
+  });
+}
+
 function setBarHighlight(barEntries, activeBarIndex) {
   barEntries.forEach(function updateBarEntry(barEntry) {
     const isActive = barEntry.barIndex === activeBarIndex;
@@ -740,10 +727,12 @@ function setBarHighlight(barEntries, activeBarIndex) {
 }
 
 function ThreeBlockMap({
+  mapDistribution,
   showTopOverlay = true,
   showInfoPanel = true,
   showViewDebugPanel = SHOW_VIEW_DEBUG_PANEL,
-  enableCameraDrag = ENABLE_CAMERA_DRAG,
+  enableCameraRotate = ENABLE_CAMERA_ROTATE,
+  enableCameraPan = ENABLE_CAMERA_PAN,
   logViewConfigToConsole = LOG_VIEW_CONFIG_TO_CONSOLE
 }) {
   const containerRef = useRef(null);
@@ -773,6 +762,8 @@ function ThreeBlockMap({
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
       const cleanupTasks = [];
+      const animationTimer = new THREE.Timer();
+      animationTimer.connect(document);
 
       async function initScene() {
         /**
@@ -786,12 +777,11 @@ function ThreeBlockMap({
           return;
         }
 
-        const { bounds, mapGroup, featureEntries, maxSpan, scale } =
+        const { mapGroup, featureEntries, maxSpan } =
           buildDistrictMeshes(geoJson);
         const { barEntries, barGroup } = buildBarOverlays(
-          districtBarData,
-          bounds,
-          scale
+          featureEntries,
+          mapDistribution
         );
         /**
          * 地图整体默认朝向在这里控制。
@@ -865,14 +855,22 @@ function ThreeBlockMap({
 
         /**
          * 交互控制器：
-         * - 允许用户手动旋转/缩放
+         * - 旋转和平移拆成两个独立开关，页面层可以只开其中一种
+         * - 当前首页如果只允许平移，就关闭 enableCameraRotate，只开启 enableCameraPan
+         * - OrbitControls 默认左键是旋转，所以只开平移时还需要把左键手势改成 PAN
          * - 明确关闭默认自动旋转
          * - 目标点抬高一点，让镜头视线更贴近地图中部
          */
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.enablePan = false;
-        controls.enableRotate = enableCameraDrag;
+        controls.enablePan = enableCameraPan;
+        controls.enableRotate = enableCameraRotate;
+        if (enableCameraPan && !enableCameraRotate) {
+          controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+          controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+          controls.touches.ONE = THREE.TOUCH.PAN;
+          controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+        }
         controls.minDistance = maxSpan * 0.45;
         controls.maxDistance = maxSpan * 2;
         controls.minPolarAngle = THREE.MathUtils.degToRad(
@@ -883,6 +881,9 @@ function ThreeBlockMap({
         );
         controls.target.set(0, 0, maxSpan * CAMERA_TARGET_Z_MULTIPLIER);
         controls.autoRotate = false;
+        const markerBaseCameraDistance = camera.position.distanceTo(
+          controls.target
+        );
 
         function syncViewDebug(forceConsoleLog = false) {
           const viewConfig = getCurrentViewConfig(
@@ -1157,18 +1158,26 @@ function ThreeBlockMap({
           controls.removeEventListener("end", handleControlsEnd);
         });
 
-        function renderFrame() {
+        function renderFrame(timestamp) {
           /**
-           * 每一帧只做两件事：
-           * 1. 更新 controls 的阻尼过渡
-           * 2. 渲染场景
+           * 每一帧做四件事：
+           * 1. 更新板块抬起动画
+           * 2. 更新 controls 的阻尼过渡
+           * 3. 根据相机距离同步 marker 缩放
+           * 4. 渲染场景
            */
           if (disposed) {
             return;
           }
 
           animationFrameId = window.requestAnimationFrame(renderFrame);
+          animationTimer.update(timestamp);
+          animateFeatureLift(featureEntries, animationTimer.getDelta());
           controls.update();
+          updateBarMarkerScale(
+            barEntries,
+            getBarMarkerScale(camera, controls, markerBaseCameraDistance)
+          );
           renderer.render(scene, camera);
           labelRenderer.render(scene, camera);
         }
@@ -1181,6 +1190,7 @@ function ThreeBlockMap({
            * 这里在组件卸载时把动画、controls、geometry、material、renderer 全部清掉。
            */
           window.cancelAnimationFrame(animationFrameId);
+          animationTimer.dispose();
           controls.dispose();
 
           scene.traverse(function disposeNode(node) {
@@ -1218,7 +1228,13 @@ function ThreeBlockMap({
         });
       };
     },
-    [enableCameraDrag, logViewConfigToConsole, showViewDebugPanel]
+    [
+      enableCameraPan,
+      enableCameraRotate,
+      logViewConfigToConsole,
+      mapDistribution,
+      showViewDebugPanel
+    ]
   );
 
   return (

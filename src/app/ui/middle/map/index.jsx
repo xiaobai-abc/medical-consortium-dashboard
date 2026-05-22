@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect } from "react";
 
 const ThreeBlockMap = dynamic(
   function loadThreeBlockMap() {
@@ -19,31 +18,7 @@ const ThreeBlockMap = dynamic(
   }
 );
 
-/**
- * 首页地图单独使用正式 three 地图组件。
- *
- * 当前策略：
- * - 首页继续使用原来的地图卡片壳子
- * - /test 页面保留独立实验版，不再和首页复用同一个组件
- * - map_distribution 先保留控制台打印，不参与 three 点位渲染
- */
 function MainMap({ mapDistribution }) {
-  useEffect(
-    function logMapDistribution() {
-      if (!mapDistribution) {
-        return;
-      }
-
-      /**
-       * TODO:
-       * 当前首页地图只恢复原来的 three 展示。
-       * 等 map_distribution 的字段和坐标方案确认后，再接入真实点位数据。
-       */
-      console.info("[MapDistribution]", mapDistribution);
-    },
-    [mapDistribution]
-  );
-
   return (
     <div
       className="w-full flex-1 h-0 mb-3 bd1 rounded-2xl px-3.5 py-4 flex flex-col"
@@ -65,11 +40,14 @@ function MainMap({ mapDistribution }) {
       </div>
 
       <div className="flex-1 h-0 overflow-hidden rounded-[20px] border border-[#1D3B7A]/55 bg-[#081225]">
+        {/* 首页地图只开放平移，不开放旋转，这样用户拖动时不会把当前固定视角打乱。 */}
         <ThreeBlockMap
+          mapDistribution={mapDistribution}
           showTopOverlay={false}
           showInfoPanel={false}
           showViewDebugPanel={false}
-          enableCameraDrag={false}
+          enableCameraRotate={false}
+          enableCameraPan
           logViewConfigToConsole={false}
         />
       </div>

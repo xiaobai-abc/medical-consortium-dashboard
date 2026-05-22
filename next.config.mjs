@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "export",
-  // allowedDevOrigins: ["192.168.110.36"],
+  /**
+   * Next 16 开发环境会拦截跨源 dev 资源请求。
+   * 局域网访问当前机器时，需要把实际访问的主机名/IP 加进 allowlist，
+   * 否则 HMR websocket 和其他 dev-only 资源会被拒掉。
+   */
+  allowedDevOrigins: ["192.168.110.46"],
   poweredByHeader: false,
   reactStrictMode: false,
   // experimental: {

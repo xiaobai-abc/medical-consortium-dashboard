@@ -5,6 +5,7 @@ import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 
 export const BAR_DANGER_THRESHOLD = 1000;
 export const BAR_WARNING_THRESHOLD = 800;
+const MARKER_DOT_ANCHOR_Y = 42;
 
 export const BAR_NORMAL_STYLE = {
   barColor: "#68F2FF",
@@ -67,65 +68,74 @@ function ReactBarMarker({
   return (
     <div
       style={{
-        transform: "translate(-50%, 0%)",
-        pointerEvents: "auto",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "1px"
+        position: "absolute",
+        left: 0,
+        top: 0,
+        transform: `translate(-50%, -${MARKER_DOT_ANCHOR_Y}px)`,
+        pointerEvents: "auto"
       }}>
-      <div className="h-fit flex flex-col items-center">
+      <div
+        style={{
+          transform: "scale(var(--map-marker-scale, 1))",
+          transformOrigin: `50% ${MARKER_DOT_ANCHOR_Y}px`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "1px"
+        }}>
+        <div className="h-fit flex flex-col items-center">
+          <div
+            className="w-2 h-10"
+            style={{
+              background: `linear-gradient(180deg, ${style.valueTextColor} 0%, ${style.barColor} 100%)`,
+              boxShadow: `0 0 18px ${style.glowColor}`,
+              transition: "all 160ms ease"
+            }}></div>
+          <div
+            className="rounded-full w-3 h-3 -mt-1"
+            style={{
+              background: style.barColor,
+              boxShadow: `0 0 16px ${style.glowColor}`,
+              transition: "all 160ms ease"
+            }}></div>
+        </div>
         <div
-          className="w-2 h-10"
           style={{
-            background: `linear-gradient(180deg, ${style.valueTextColor} 0%, ${style.barColor} 100%)`,
+            minWidth: "48px",
+            padding: "3px 10px",
+            borderRadius: "6px",
+            border: `1px solid ${style.valueBorderColor}`,
+            background: style.valueBackground,
             boxShadow: `0 0 18px ${style.glowColor}`,
+            color: style.valueTextColor,
+            fontSize: "12px",
+            fontWeight: "700",
+            lineHeight: "1",
+            textAlign: "center",
+            fontVariantNumeric: "tabular-nums",
+            letterSpacing: "0.04em",
+            whiteSpace: "nowrap",
             transition: "all 160ms ease"
-          }}></div>
+          }}>
+          {value}
+        </div>
         <div
-          className="rounded-full w-3 h-3 -mt-1"
           style={{
-            background: style.barColor,
-            boxShadow: `0 0 16px ${style.glowColor}`,
+            padding: "4px 14px",
+            borderRadius: "999px",
+            border: `1px solid ${style.nameBorderColor}`,
+            background: style.nameBackground,
+            boxShadow: `0 0 18px ${style.glowColor}`,
+            color: style.nameTextColor,
+            fontSize: "11px",
+            fontWeight: "500",
+            lineHeight: "1",
+            letterSpacing: "0.02em",
+            whiteSpace: "nowrap",
             transition: "all 160ms ease"
-          }}></div>
-      </div>
-      <div
-        style={{
-          minWidth: "48px",
-          padding: "3px 10px",
-          borderRadius: "6px",
-          border: `1px solid ${style.valueBorderColor}`,
-          background: style.valueBackground,
-          boxShadow: `0 0 18px ${style.glowColor}`,
-          color: style.valueTextColor,
-          fontSize: "12px",
-          fontWeight: "700",
-          lineHeight: "1",
-          textAlign: "center",
-          fontVariantNumeric: "tabular-nums",
-          letterSpacing: "0.04em",
-          whiteSpace: "nowrap",
-          transition: "all 160ms ease"
-        }}>
-        {value}
-      </div>
-      <div
-        style={{
-          padding: "4px 14px",
-          borderRadius: "999px",
-          border: `1px solid ${style.nameBorderColor}`,
-          background: style.nameBackground,
-          boxShadow: `0 0 18px ${style.glowColor}`,
-          color: style.nameTextColor,
-          fontSize: "11px",
-          fontWeight: "500",
-          lineHeight: "1",
-          letterSpacing: "0.02em",
-          whiteSpace: "nowrap",
-          transition: "all 160ms ease"
-        }}>
-        {name}
+          }}>
+          {name}
+        </div>
       </div>
     </div>
   );
@@ -140,6 +150,7 @@ export function createReactBarMarkerObject({
   metricValue
 }) {
   const markerElement = document.createElement("div");
+  markerElement.style.overflow = "visible";
   const resolvedMetricValue =
     typeof metricValue === "number" ? metricValue : Number(value) || 0;
   const barStyle = getBarVisualStyle(resolvedMetricValue);
@@ -149,6 +160,7 @@ export function createReactBarMarkerObject({
   );
 
   const markerObject = new CSS2DObject(markerElement);
+  markerObject.center.set(0, 0);
   markerObject.position.set(x, y, z);
 
   return {
