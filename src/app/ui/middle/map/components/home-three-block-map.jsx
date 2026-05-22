@@ -748,6 +748,11 @@ function updateBarMarkerScale(barEntries, markerScale) {
 function setBarHighlight(barEntries, activeBarIndex) {
   barEntries.forEach(function updateBarEntry(barEntry) {
     const isActive = barEntry.barIndex === activeBarIndex;
+    /**
+     * 点位靠得很近时，hover 的那个点需要始终压到最上层，
+     * 否则浮层内容很容易被邻近点位盖住。
+     */
+    barEntry.markerElement.style.zIndex = isActive ? "9999" : "1";
     barEntry.markerElement.style.opacity = isActive ? "1" : "0.96";
   });
 }
