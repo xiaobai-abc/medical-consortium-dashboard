@@ -142,7 +142,12 @@ export function normalizeServiceOverviewPopup(responseData, fallbackCenterOption
     items: itemsSource.map(function mapItem(item, index) {
       return {
         id: String(item?.id || item?.center_id || item?.center_name || `service-${index + 1}`),
-        centerName: item?.center_name || item?.centerName || "-",
+        centerName:
+          item?.center_name ||
+          item?.centerName ||
+          item?.hospital_name ||
+          item?.hospitalName ||
+          "-",
         serviceCount: toNumber(item?.service_count ?? item?.serviceCount) || 0,
         abnormalCount: toNumber(item?.abnormal_count ?? item?.abnormalCount) || 0,
         riskLevel:
@@ -151,7 +156,7 @@ export function normalizeServiceOverviewPopup(responseData, fallbackCenterOption
           item?.riskLevel ||
           item?.risk_level ||
           "-",
-        riskLevelColor: item?.risk_level_color || "#E8F0FF",
+        riskLevelColor: item?.risk_level_color || item?.riskLevelColor || "#E8F0FF",
       };
     }),
   };
