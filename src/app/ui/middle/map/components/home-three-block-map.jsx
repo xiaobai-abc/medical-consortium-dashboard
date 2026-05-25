@@ -100,6 +100,20 @@ const FEATURE_LIFT_EPSILON = 0.01;
  */
 const LABEL_OFFSET_Z = 18;
 
+let hangzhouGeoJsonPromise = null;
+
+function getHangzhouGeoJson() {
+  if (!hangzhouGeoJsonPromise) {
+    hangzhouGeoJsonPromise = fetch("/json/330100.geojson").then(
+      function parseHangzhouGeoJson(response) {
+        return response.json();
+      }
+    );
+  }
+
+  return hangzhouGeoJsonPromise;
+}
+
 function removeClosingPoint(ring) {
   if (ring.length < 2) {
     return ring;
@@ -770,6 +784,8 @@ function ThreeBlockMap({
   const infoRef = useRef(null);
   const tooltipRef = useRef(null);
   const viewDebugRef = useRef(null);
+  const mapDistributionRef = useRef(mapDistribution);
+  const sceneRuntimeRef = useRef(null);
   const [tooltipData, setTooltipData] = useState({
     visible: false,
     name: "区块名称",
@@ -801,25 +817,18 @@ function ThreeBlockMap({
          * 这里直接读取 public 下的静态 GeoJSON。
          * 因为 test 页只是本地实验页，不需要再抽一层数据请求封装。
          */
-        const response = await fetch("/json/330100.geojson");
-        const geoJson = await response.json();
+        const geoJson = await getHangzhouGeoJson();
 
         if (disposed) {
           return;
         }
 
-        const { mapGroup, featureEntries, maxSpan } =
-          buildDistrictMeshes(geoJson);
-        const { barEntries, barGroup } = buildBarOverlays(
-          featureEntries,
-          mapDistribution
-        );
+        const { mapGroup, featureEntries, maxSpan } = buildDistrictMeshes(geoJson);
         /**
          * 地图整体默认朝向在这里控制。
          * 改角度时优先改顶部的 MAP_ROTATION_DEGREES，不要直接写死弧度值。
          */
         mapGroup.rotation.z = THREE.MathUtils.degToRad(MAP_ROTATION_DEGREES);
-        barGroup.rotation.z = THREE.MathUtils.degToRad(MAP_ROTATION_DEGREES);
         const meshTargets = [
           ...featureEntries.flatMap(function flattenFeature(feature) {
             return feature.meshes;
@@ -973,7 +982,6 @@ function ThreeBlockMap({
         scene.add(rimLight);
         scene.add(plane);
         scene.add(mapGroup);
-        scene.add(barGroup);
         syncViewDebug(false);
 
         // ===================================
@@ -1019,10 +1027,11 @@ function ThreeBlockMap({
             return;
           }
 
+          const currentBarEntries = sceneRuntimeRef.current?.barEntries || [];
           activeFeatureIndex = nextFeatureIndex;
           activeBarIndex = nextBarIndex;
           setFeatureHighlight(featureEntries, activeFeatureIndex);
-          setBarHighlight(barEntries, activeBarIndex);
+          setBarHighlight(currentBarEntries, activeBarIndex);
 
           if (!infoRef.current) {
             return;
@@ -1046,7 +1055,7 @@ function ThreeBlockMap({
           const activeBar =
             activeBarIndex === null
               ? null
-              : barEntries.find(function findBarEntry(barEntry) {
+              : currentBarEntries.find(function findBarEntry(barEntry) {
                   return barEntry.barIndex === activeBarIndex;
                 });
 
@@ -1098,42 +1107,113 @@ function ThreeBlockMap({
           updateHoverState(null);
         }
 
-        barEntries.forEach(function bindBarPointerEvents(barEntry) {
-          const handlePointerEnter = function handlePointerEnter(event) {
-            handleBarPointerEnter(barEntry, event);
-          };
-          const handlePointerMove = function handlePointerMove(event) {
-            handleBarPointerMove(barEntry, event);
-          };
+        function cleanupBarPointerEvents() {
+          const sceneRuntime = sceneRuntimeRef.current;
 
-          barEntry.markerElement.addEventListener(
-            "pointerenter",
-            handlePointerEnter
-          );
-          barEntry.markerElement.addEventListener(
-            "pointermove",
-            handlePointerMove
-          );
-          barEntry.markerElement.addEventListener(
-            "pointerleave",
-            handleBarPointerLeave
-          );
+          if (!sceneRuntime?.barPointerCleanupTasks?.length) {
+            return;
+          }
 
-          cleanupTasks.push(function cleanupBarPointerEvents() {
-            barEntry.markerElement.removeEventListener(
+          sceneRuntime.barPointerCleanupTasks
+            .splice(0)
+            .forEach(function runBarPointerCleanup(cleanupTask) {
+              cleanupTask();
+            });
+        }
+
+        function bindBarPointerEvents(barEntries) {
+          const sceneRuntime = sceneRuntimeRef.current;
+
+          if (!sceneRuntime) {
+            return;
+          }
+
+          barEntries.forEach(function bindBarPointerEventsForEntry(barEntry) {
+            const handlePointerEnter = function handlePointerEnter(event) {
+              handleBarPointerEnter(barEntry, event);
+            };
+            const handlePointerMove = function handlePointerMove(event) {
+              handleBarPointerMove(barEntry, event);
+            };
+
+            barEntry.markerElement.addEventListener(
               "pointerenter",
               handlePointerEnter
             );
-            barEntry.markerElement.removeEventListener(
+            barEntry.markerElement.addEventListener(
               "pointermove",
               handlePointerMove
             );
-            barEntry.markerElement.removeEventListener(
+            barEntry.markerElement.addEventListener(
               "pointerleave",
               handleBarPointerLeave
             );
+
+            sceneRuntime.barPointerCleanupTasks.push(
+              function cleanupBarPointerEventsForEntry() {
+                barEntry.markerElement.removeEventListener(
+                  "pointerenter",
+                  handlePointerEnter
+                );
+                barEntry.markerElement.removeEventListener(
+                  "pointermove",
+                  handlePointerMove
+                );
+                barEntry.markerElement.removeEventListener(
+                  "pointerleave",
+                  handleBarPointerLeave
+                );
+              }
+            );
           });
-        });
+        }
+
+        function replaceBarOverlays(nextMapDistribution) {
+          const sceneRuntime = sceneRuntimeRef.current;
+
+          if (!sceneRuntime) {
+            return;
+          }
+
+          cleanupBarPointerEvents();
+
+          if (sceneRuntime.barGroup) {
+            scene.remove(sceneRuntime.barGroup);
+          }
+
+          const { barEntries, barGroup } = buildBarOverlays(
+            featureEntries,
+            nextMapDistribution
+          );
+          barGroup.rotation.z = THREE.MathUtils.degToRad(MAP_ROTATION_DEGREES);
+          scene.add(barGroup);
+
+          sceneRuntime.barEntries = barEntries;
+          sceneRuntime.barGroup = barGroup;
+          bindBarPointerEvents(barEntries);
+
+          if (activeBarIndex !== null) {
+            const activeBarStillExists = barEntries.some(function hasActiveBar(barEntry) {
+              return barEntry.barIndex === activeBarIndex;
+            });
+
+            if (!activeBarStillExists) {
+              activeBarIndex = null;
+            }
+          }
+
+          setBarHighlight(barEntries, activeBarIndex);
+        }
+
+        sceneRuntimeRef.current = {
+          featureEntries,
+          barEntries: [],
+          barGroup: null,
+          barPointerCleanupTasks: [],
+          replaceBarOverlays
+        };
+        replaceBarOverlays(mapDistributionRef.current);
+        cleanupTasks.push(cleanupBarPointerEvents);
 
         function handlePointerMove(event) {
           /**
@@ -1222,10 +1302,10 @@ function ThreeBlockMap({
           animationFrameId = window.requestAnimationFrame(renderFrame);
           animationTimer.update(timestamp);
           animateFeatureLift(featureEntries, animationTimer.getDelta());
-          syncBarMarkerLift(barEntries, featureEntries);
+          syncBarMarkerLift(sceneRuntimeRef.current?.barEntries || [], featureEntries);
           controls.update();
           updateBarMarkerScale(
-            barEntries,
+            sceneRuntimeRef.current?.barEntries || [],
             getBarMarkerScale(camera, controls, markerBaseCameraDistance)
           );
           renderer.render(scene, camera);
@@ -1273,6 +1353,7 @@ function ThreeBlockMap({
 
       return function cleanupThreeMapEffect() {
         disposed = true;
+        sceneRuntimeRef.current = null;
         cleanupTasks.reverse().forEach(function runCleanup(cleanupTask) {
           cleanupTask();
         });
@@ -1282,9 +1363,21 @@ function ThreeBlockMap({
       enableCameraPan,
       enableCameraRotate,
       logViewConfigToConsole,
-      mapDistribution,
       showViewDebugPanel
     ]
+  );
+
+  useEffect(
+    function syncMapDistributionEffect() {
+      mapDistributionRef.current = mapDistribution;
+
+      if (!sceneRuntimeRef.current?.replaceBarOverlays) {
+        return;
+      }
+
+      sceneRuntimeRef.current.replaceBarOverlays(mapDistribution);
+    },
+    [mapDistribution]
   );
 
   return (
