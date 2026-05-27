@@ -9,25 +9,41 @@ import { echarts } from "./register-line";
  */
 export function useECharts(createOption, deps) {
   const chartRef = useRef(null);
+  const chartInstanceRef = useRef(null);
 
-  useEffect(function initializeChart() {
-    if (!chartRef.current) {
+  useEffect(function initializeChartInstance() {
+    const chartElement = chartRef.current;
+
+    if (!chartElement) {
       return;
     }
 
-    const chartInstance = echarts.init(chartRef.current);
+    const chartInstance =
+      echarts.getInstanceByDom(chartElement) || echarts.init(chartElement);
     const resizeObserver = new ResizeObserver(function resizeChart() {
       chartInstance.resize();
     });
 
-    chartInstance.setOption(createOption());
-    resizeObserver.observe(chartRef.current);
+    chartInstanceRef.current = chartInstance;
+    resizeObserver.observe(chartElement);
 
     return function cleanupChart() {
       resizeObserver.disconnect();
+      chartInstanceRef.current = null;
       chartInstance.dispose();
     };
-  }, deps);
+  }, []);
+
+  useEffect(
+    function syncChartOption() {
+      if (!chartInstanceRef.current) {
+        return;
+      }
+
+      chartInstanceRef.current.setOption(createOption());
+    },
+    deps
+  );
 
   return chartRef;
 }

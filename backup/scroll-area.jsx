@@ -23,7 +23,7 @@ function ScrollArea({
         data-slot="scroll-area-viewport"
         className="scrollbar-hidden size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
       >
-        <ScrollAreaPrimitive.Content>{children}</ScrollAreaPrimitive.Content>
+        {children}
       </ScrollAreaPrimitive.Viewport>
       {showScrollbar ? (
         <ScrollBar showScrollbarOnHover={showScrollbarOnHover} />
@@ -32,8 +32,6 @@ function ScrollArea({
     </ScrollAreaPrimitive.Root>
   );
 }
-// transition-[opacity,color]
-// transition-[opacity,color]
 //  showScrollbarOnHover
 //           ? "pointer-events-none flex touch-none p-px opacity-0 transition-[opacity,color] duration-200 select-none group-hover/scroll-area:pointer-events-auto group-hover/scroll-area:opacity-100 group-focus-within/scroll-area:pointer-events-auto group-focus-within/scroll-area:opacity-100"
 //           : "pointer-events-auto flex touch-none p-px opacity-100 transition-[opacity,color] duration-200 select-none",
@@ -50,8 +48,8 @@ function ScrollBar({
       orientation={orientation}
       className={cn(
         showScrollbarOnHover
-          ? "pointer-events-none flex touch-none opacity-0  duration-200 select-none group-hover/scroll-area:pointer-events-auto group-hover/scroll-area:opacity-100 group-focus-within/scroll-area:pointer-events-auto group-focus-within/scroll-area:opacity-100"
-          : "pointer-events-auto flex touch-none opacity-100  duration-200 select-none",
+          ? "pointer-events-none flex touch-none p-px opacity-0 transition-[opacity,color] duration-200 select-none group-hover/scroll-area:pointer-events-auto group-hover/scroll-area:opacity-100 group-focus-within/scroll-area:pointer-events-auto group-focus-within/scroll-area:opacity-100"
+          : "pointer-events-auto flex touch-none p-px opacity-100 transition-[opacity,color] duration-200 select-none",
         "data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent",
         className
       )}

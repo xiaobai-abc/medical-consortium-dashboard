@@ -14,91 +14,10 @@ import {
   getBarHeight,
   getBarVisualStyle
 } from "./react-bar-marker";
+import { hangzhouDistrictCoordinateMap } from "./home-district-coordinate-map";
+import homeThreeBlockMapConfig from "./home-three-block-map-config";
 
-/**
- * 用户明确指定的地图主色。
- * 顶面用更稳的蓝色，侧面用更亮的青色，边界线单独使用浅蓝色强调分区。
- */
-const TOP_FACE_COLOR = "#60A6F6";
-const SIDE_FACE_COLOR = "#63F6F7";
-const BOUNDARY_LINE_COLOR = "#6AE3F5";
-
-/**
- * 下面这些参数专门控制“颜色看起来有多亮”。
- * 如果你后面还觉得发深，优先继续调这几项，不要先去改原始颜色值。
- */
-const TOP_EMISSIVE_STRENGTH = 0.34;
-const SIDE_EMISSIVE_STRENGTH = 0.24;
-const HOVER_TOP_EMISSIVE_STRENGTH = 0.46;
-const HOVER_SIDE_EMISSIVE_STRENGTH = 0.34;
-const RENDERER_EXPOSURE = 1.1;
-const FOG_START_MULTIPLIER = 1.25;
-const FOG_END_MULTIPLIER = 3.4;
-
-/**
- * 所有板块统一使用同一个挤出高度。
- * 后面如果你想整体变高或变矮，只改这一个数字。
- */
-const BLOCK_HEIGHT = 40;
-
-/**
- * 柱状条相关参数。
- * 这一组专门控制“柱子图层”的视觉。
- * 现在会尽量贴近参考图：细竖条 + 数值牌 + 底部胶囊名称。
- */
-const BAR_MAX_HEIGHT = 128; // 柱子的最大高度，数值越大，最高柱子越长
-const BAR_MIN_HEIGHT = 72; // 柱子的最小高度，避免低值柱子太短看不见
-const BAR_OFFSET_X = 0; // 柱子整体沿 X 轴的偏移量
-const BAR_MARKER_MIN_SCALE = 0.72;
-const BAR_MARKER_MAX_SCALE = 1.18;
-const BAR_MARKER_SCALE_POWER = 0.72;
-const BAR_MARKER_SCALE_EPSILON = 0.01;
-
-/**
- * hover 浮窗的鼠标偏移，避免浮窗直接挡在光标下面。
- */
-const TOOLTIP_OFFSET_X = 18;
-const TOOLTIP_OFFSET_Y = 18;
-
-/**
- * 地图默认旋转角度。
- * 这里直接用角度值，后续你想改成 15、30、45 都只改这一个数字。
- * 当前值 30 代表默认逆时针旋转 30 度。
- */
-const MAP_ROTATION_DEGREES = 30;
-
-/**
- * 下面这组参数专门控制“默认看地图的角度”。
- * 以后你如果想改视角，优先只改这里：
- * - CAMERA_AZIMUTH_DEGREES: 水平绕地图转到哪个方向看
- * - CAMERA_TILT_DEGREES: 镜头抬高多少，也就是你说的倾斜度
- * - CAMERA_DISTANCE_MULTIPLIER: 镜头离地图有多远
- * - CAMERA_TARGET_Z_MULTIPLIER: 镜头默认看向地图高度的哪个位置
- */
-const CAMERA_AZIMUTH_DEGREES = -113.72;
-const CAMERA_TILT_DEGREES = 68.25;
-const CAMERA_DISTANCE_MULTIPLIER = 1.387;
-const CAMERA_TARGET_Z_MULTIPLIER = 0.08;
-const CAMERA_MIN_POLAR_DEGREES = 20;
-const CAMERA_MAX_POLAR_DEGREES = 82;
-const ENABLE_CAMERA_ROTATE = true; // 是否允许鼠标拖动旋转地图视角
-const ENABLE_CAMERA_PAN = false; // 是否允许鼠标拖动平移地图位置
-const SHOW_VIEW_DEBUG_PANEL = true; // 是否显示当前视角参数面板，方便回填默认值
-const LOG_VIEW_CONFIG_TO_CONSOLE = true; // 是否在视角变化时把当前参数打印到控制台
-
-/**
- * 悬停高亮时统一往白色方向提亮一点，避免完全变色后丢失原始主题色。
- */
-const HOVER_BLEND_COLOR = "#ffffff";
-const FEATURE_LIFT_IDLE_Z = 0;
-const FEATURE_LIFT_ACTIVE_Z = 8;
-const FEATURE_LIFT_DAMPING = 16;
-const FEATURE_LIFT_EPSILON = 0.01;
-
-/**
- * 标签相对板块顶部再抬高一点，避免名字贴在面上显得拥挤。
- */
-const LABEL_OFFSET_Z = 18;
+const mapConfig = homeThreeBlockMapConfig;
 
 let hangzhouGeoJsonPromise = null;
 
@@ -140,6 +59,17 @@ function projectPoint(point, center, scale) {
     (point[0] - center[0]) * scale,
     (point[1] - center[1]) * -scale
   );
+}
+
+function restoreCoordinate(projectedPoint, center, scale) {
+  if (!projectedPoint || !scale) {
+    return null;
+  }
+
+  return [
+    Number((projectedPoint.x / scale + center[0]).toFixed(6)),
+    Number((center[1] - projectedPoint.y / scale).toFixed(6))
+  ];
 }
 
 function normalizeRing(ring, center, scale, shouldBeClockwise) {
@@ -228,7 +158,7 @@ function createRingLine(ring, height) {
   });
   const lineGeometry = new THREE.BufferGeometry().setFromPoints(linePoints);
   const lineMaterial = new THREE.LineBasicMaterial({
-    color: BOUNDARY_LINE_COLOR,
+    color: mapConfig.colors.boundaryLine,
     transparent: true,
     opacity: 0.95
   });
@@ -290,12 +220,14 @@ function createFeatureLabel(featureName, labelPosition, height) {
   labelElement.style.whiteSpace = "nowrap";
   labelElement.style.pointerEvents = "none";
   labelElement.style.transform = "translate(-50%, -50%)";
+  labelElement.style.zIndex = "1";
 
   const labelObject = new CSS2DObject(labelElement);
+  labelObject.renderOrder = 1;
   labelObject.position.set(
     labelPosition.x,
     labelPosition.y,
-    height + LABEL_OFFSET_Z
+    height + mapConfig.map.labelOffsetZ
   );
 
   return {
@@ -313,14 +245,27 @@ function toSafeNumber(value, fallback = 0) {
   return Number.isFinite(nextValue) ? nextValue : fallback;
 }
 
+function getProjectedBarAnchorPoint(featureEntry, bounds, scale) {
+  const mappedCoordinate =
+    hangzhouDistrictCoordinateMap[normalizeDistrictName(featureEntry.featureName)];
+
+  if (Array.isArray(mappedCoordinate) && mappedCoordinate.length === 2) {
+    return projectPoint(mappedCoordinate, bounds.center, scale);
+  }
+
+  return featureEntry.labelAnchorPoint;
+}
+
 /**
  * 根据“水平角度 + 倾斜度 + 距离”计算默认相机位置。
  * 这样后面调视角时，你不需要再手算 x/y/z。
  */
 function getDefaultCameraPosition(maxSpan) {
-  const azimuthRadians = THREE.MathUtils.degToRad(CAMERA_AZIMUTH_DEGREES);
-  const tiltRadians = THREE.MathUtils.degToRad(CAMERA_TILT_DEGREES);
-  const cameraDistance = maxSpan * CAMERA_DISTANCE_MULTIPLIER;
+  const azimuthRadians = THREE.MathUtils.degToRad(
+    mapConfig.camera.azimuthDegrees
+  );
+  const tiltRadians = THREE.MathUtils.degToRad(mapConfig.camera.tiltDegrees);
+  const cameraDistance = maxSpan * mapConfig.camera.distanceMultiplier;
   const horizontalDistance = Math.cos(tiltRadians) * cameraDistance;
   const verticalDistance = Math.sin(tiltRadians) * cameraDistance;
 
@@ -363,11 +308,11 @@ function getCurrentViewConfig(camera, controls, maxSpan, mapRotationRadians) {
 
 function formatViewConfigText(viewConfig) {
   return [
-    `MAP_ROTATION_DEGREES = ${viewConfig.mapRotationDegrees}`,
-    `CAMERA_AZIMUTH_DEGREES = ${viewConfig.cameraAzimuthDegrees}`,
-    `CAMERA_TILT_DEGREES = ${viewConfig.cameraTiltDegrees}`,
-    `CAMERA_DISTANCE_MULTIPLIER = ${viewConfig.cameraDistanceMultiplier}`,
-    `CAMERA_TARGET_Z_MULTIPLIER = ${viewConfig.cameraTargetZMultiplier}`
+    `map.rotationDegrees = ${viewConfig.mapRotationDegrees}`,
+    `camera.azimuthDegrees = ${viewConfig.cameraAzimuthDegrees}`,
+    `camera.tiltDegrees = ${viewConfig.cameraTiltDegrees}`,
+    `camera.distanceMultiplier = ${viewConfig.cameraDistanceMultiplier}`,
+    `camera.targetZMultiplier = ${viewConfig.cameraTargetZMultiplier}`
   ].join("\n");
 }
 
@@ -387,9 +332,9 @@ function buildDistrictMeshes(featureCollection) {
   featureCollection.features.forEach(
     function buildFeature(feature, featureIndex) {
       const polygons = getGeometryPolygons(feature);
-      const topFaceColor = new THREE.Color(TOP_FACE_COLOR);
-      const sideFaceColor = new THREE.Color(SIDE_FACE_COLOR);
-      const featureHeight = BLOCK_HEIGHT;
+      const topFaceColor = new THREE.Color(mapConfig.colors.topFace);
+      const sideFaceColor = new THREE.Color(mapConfig.colors.sideFace);
+      const featureHeight = mapConfig.map.blockHeight;
       const featureName =
         feature.properties?.name || `区域 ${featureIndex + 1}`;
       const meshes = [];
@@ -447,7 +392,9 @@ function buildDistrictMeshes(featureCollection) {
          */
         const topMaterial = new THREE.MeshStandardMaterial({
           color: topFaceColor.clone(),
-          emissive: topFaceColor.clone().multiplyScalar(TOP_EMISSIVE_STRENGTH),
+          emissive: topFaceColor
+            .clone()
+            .multiplyScalar(mapConfig.lighting.topEmissiveStrength),
           metalness: 0.14,
           roughness: 0.4
         });
@@ -455,7 +402,7 @@ function buildDistrictMeshes(featureCollection) {
           color: sideFaceColor.clone(),
           emissive: sideFaceColor
             .clone()
-            .multiplyScalar(SIDE_EMISSIVE_STRENGTH),
+            .multiplyScalar(mapConfig.lighting.sideEmissiveStrength),
           metalness: 0.08,
           roughness: 0.52
         });
@@ -519,7 +466,7 @@ function buildDistrictMeshes(featureCollection) {
         baseTopColor: topFaceColor,
         baseSideColor: sideFaceColor,
         height: featureHeight,
-        targetLiftZ: FEATURE_LIFT_IDLE_Z,
+        targetLiftZ: mapConfig.interaction.featureLiftIdleZ,
         meshes,
         outlineMaterials,
         labelElement
@@ -538,10 +485,10 @@ function buildDistrictMeshes(featureCollection) {
   };
 }
 
-function buildBarOverlays(featureEntries, mapDistribution) {
+function buildBarOverlays(featureEntries, mapDistribution, bounds, scale) {
   const barEntries = [];
   const barGroup = new THREE.Group();
-  const baseMarkerZ = BLOCK_HEIGHT + 2;
+  const baseMarkerZ = mapConfig.map.blockHeight + 2;
   const districtItems = Array.isArray(mapDistribution?.hangzhou_districts)
     ? mapDistribution.hangzhou_districts
     : [];
@@ -572,7 +519,11 @@ function buildBarOverlays(featureEntries, mapDistribution) {
 
   normalizedBarData.forEach(function buildBarEntry(barDatum, barIndex) {
     const { featureEntry, metricValue } = barDatum;
-    const projectedAnchorPoint = featureEntry.labelAnchorPoint;
+    const projectedAnchorPoint = getProjectedBarAnchorPoint(
+      featureEntry,
+      bounds,
+      scale
+    );
 
     if (!projectedAnchorPoint) {
       return;
@@ -581,12 +532,12 @@ function buildBarOverlays(featureEntries, mapDistribution) {
     const barHeight = getBarHeight(
       metricValue,
       maxBarMetricValue,
-      BAR_MIN_HEIGHT,
-      BAR_MAX_HEIGHT
+      mapConfig.bar.minHeight,
+      mapConfig.bar.maxHeight
     );
     const barStyle = getBarVisualStyle(metricValue);
     const marker = createReactBarMarkerObject({
-      x: projectedAnchorPoint.x + BAR_OFFSET_X,
+      x: projectedAnchorPoint.x + mapConfig.bar.offsetX,
       y: projectedAnchorPoint.y,
       z: baseMarkerZ,
       name: barDatum?.name || `点位 ${barIndex + 1}`,
@@ -628,12 +579,12 @@ function setFeatureHighlight(featureEntries, activeFeatureIndex) {
       const nextTopColor = isActive
         ? mesh.userData.baseTopColor
             .clone()
-            .lerp(new THREE.Color(HOVER_BLEND_COLOR), 0.22)
+            .lerp(new THREE.Color(mapConfig.colors.hoverBlend), 0.22)
         : mesh.userData.baseTopColor;
       const nextSideColor = isActive
         ? mesh.userData.baseSideColor
             .clone()
-            .lerp(new THREE.Color(HOVER_BLEND_COLOR), 0.18)
+            .lerp(new THREE.Color(mapConfig.colors.hoverBlend), 0.18)
         : mesh.userData.baseSideColor;
 
       mesh.material[0].color.copy(nextTopColor);
@@ -641,10 +592,10 @@ function setFeatureHighlight(featureEntries, activeFeatureIndex) {
         isActive
           ? mesh.userData.baseTopColor
               .clone()
-              .multiplyScalar(HOVER_TOP_EMISSIVE_STRENGTH)
+              .multiplyScalar(mapConfig.lighting.hoverTopEmissiveStrength)
           : mesh.userData.baseTopColor
               .clone()
-              .multiplyScalar(TOP_EMISSIVE_STRENGTH)
+              .multiplyScalar(mapConfig.lighting.topEmissiveStrength)
       );
 
       mesh.material[1].color.copy(nextSideColor);
@@ -652,19 +603,21 @@ function setFeatureHighlight(featureEntries, activeFeatureIndex) {
         isActive
           ? mesh.userData.baseSideColor
               .clone()
-              .multiplyScalar(HOVER_SIDE_EMISSIVE_STRENGTH)
+              .multiplyScalar(mapConfig.lighting.hoverSideEmissiveStrength)
           : mesh.userData.baseSideColor
               .clone()
-              .multiplyScalar(SIDE_EMISSIVE_STRENGTH)
+              .multiplyScalar(mapConfig.lighting.sideEmissiveStrength)
       );
     });
     featureEntry.targetLiftZ = isActive
-      ? FEATURE_LIFT_ACTIVE_Z
-      : FEATURE_LIFT_IDLE_Z;
+      ? mapConfig.interaction.featureLiftActiveZ
+      : mapConfig.interaction.featureLiftIdleZ;
 
     featureEntry.outlineMaterials.forEach(
       function updateLineMaterial(material) {
-        material.color.set(isActive ? "#ffffff" : BOUNDARY_LINE_COLOR);
+        material.color.set(
+          isActive ? "#ffffff" : mapConfig.colors.boundaryLine
+        );
         material.opacity = isActive ? 1 : 0.95;
       }
     );
@@ -682,18 +635,20 @@ function animateFeatureLift(featureEntries, deltaSeconds) {
    * 这样动画不会受 pointermove 频率影响，过渡也更稳定。
    */
   featureEntries.forEach(function updateFeatureLift(featureEntry) {
-    const targetLiftZ = featureEntry.targetLiftZ ?? FEATURE_LIFT_IDLE_Z;
+    const targetLiftZ =
+      featureEntry.targetLiftZ ?? mapConfig.interaction.featureLiftIdleZ;
 
     featureEntry.meshes.forEach(function updateMeshLift(mesh) {
       const nextLiftZ = THREE.MathUtils.damp(
         mesh.position.z,
         targetLiftZ,
-        FEATURE_LIFT_DAMPING,
+        mapConfig.interaction.featureLiftDamping,
         deltaSeconds
       );
 
       mesh.position.z =
-        Math.abs(nextLiftZ - targetLiftZ) < FEATURE_LIFT_EPSILON
+        Math.abs(nextLiftZ - targetLiftZ) <
+        mapConfig.interaction.featureLiftEpsilon
           ? targetLiftZ
           : nextLiftZ;
     });
@@ -710,16 +665,40 @@ function syncBarMarkerLift(barEntries, featureEntries) {
     featureEntries.map(function mapFeatureLift(featureEntry) {
       return [
         featureEntry.featureIndex,
-        featureEntry.meshes[0]?.position.z ?? FEATURE_LIFT_IDLE_Z
+        featureEntry.meshes[0]?.position.z ??
+          mapConfig.interaction.featureLiftIdleZ
       ];
     })
   );
 
   barEntries.forEach(function updateBarMarkerLift(barEntry) {
     const featureLiftZ =
-      featureLiftMap.get(barEntry.featureIndex) ?? FEATURE_LIFT_IDLE_Z;
+      featureLiftMap.get(barEntry.featureIndex) ??
+      mapConfig.interaction.featureLiftIdleZ;
 
     barEntry.markerObject.position.z = barEntry.baseMarkerZ + featureLiftZ;
+  });
+}
+
+function removeBarGroupElements(barGroup) {
+  if (!barGroup) {
+    return;
+  }
+
+  /**
+   * barGroup 里挂的是 CSS2DObject。
+   * 仅仅 scene.remove(barGroup) 还不够，旧的 DOM marker 可能会残留在
+   * CSS2DRenderer 的容器里，表现成“地图拖动后复制出一层悬浮副本”。
+   * 这里显式把旧 marker DOM 一起摘掉，避免刷新点位数据后留下幽灵节点。
+   */
+  barGroup.traverse(function removeBarGroupElement(node) {
+    if (
+      node.isCSS2DObject &&
+      node.element &&
+      node.element.parentNode
+    ) {
+      node.element.remove();
+    }
   });
 }
 
@@ -731,13 +710,13 @@ function getBarMarkerScale(camera, controls, baseCameraDistance) {
   const currentCameraDistance = camera.position.distanceTo(controls.target);
   const rawScale = Math.pow(
     baseCameraDistance / Math.max(currentCameraDistance, 1),
-    BAR_MARKER_SCALE_POWER
+    mapConfig.bar.markerScalePower
   );
 
   return THREE.MathUtils.clamp(
     rawScale,
-    BAR_MARKER_MIN_SCALE,
-    BAR_MARKER_MAX_SCALE
+    mapConfig.bar.markerMinScale,
+    mapConfig.bar.markerMaxScale
   );
 }
 
@@ -746,7 +725,7 @@ function updateBarMarkerScale(barEntries, markerScale) {
     if (
       typeof barEntry.currentMarkerScale === "number" &&
       Math.abs(barEntry.currentMarkerScale - markerScale) <
-        BAR_MARKER_SCALE_EPSILON
+        mapConfig.bar.markerScaleEpsilon
     ) {
       return;
     }
@@ -766,7 +745,8 @@ function setBarHighlight(barEntries, activeBarIndex) {
      * 点位靠得很近时，hover 的那个点需要始终压到最上层，
      * 否则浮层内容很容易被邻近点位盖住。
      */
-    barEntry.markerElement.style.zIndex = isActive ? "9999" : "1";
+    barEntry.markerObject.renderOrder = isActive ? 9999 : 20;
+    barEntry.markerElement.style.zIndex = isActive ? "9999" : "20";
     barEntry.markerElement.style.opacity = isActive ? "1" : "0.96";
   });
 }
@@ -775,10 +755,10 @@ function ThreeBlockMap({
   mapDistribution,
   showTopOverlay = true,
   showInfoPanel = true,
-  showViewDebugPanel = SHOW_VIEW_DEBUG_PANEL,
-  enableCameraRotate = ENABLE_CAMERA_ROTATE,
-  enableCameraPan = ENABLE_CAMERA_PAN,
-  logViewConfigToConsole = LOG_VIEW_CONFIG_TO_CONSOLE
+  showViewDebugPanel = mapConfig.camera.showViewDebugPanel,
+  enableCameraRotate = mapConfig.camera.enableRotate,
+  enableCameraPan = mapConfig.camera.enablePan,
+  logViewConfigToConsole = mapConfig.camera.logViewConfigToConsole
 }) {
   const containerRef = useRef(null);
   const infoRef = useRef(null);
@@ -823,12 +803,15 @@ function ThreeBlockMap({
           return;
         }
 
-        const { mapGroup, featureEntries, maxSpan } = buildDistrictMeshes(geoJson);
+        const { bounds, mapGroup, featureEntries, maxSpan, scale } =
+          buildDistrictMeshes(geoJson);
         /**
          * 地图整体默认朝向在这里控制。
-         * 改角度时优先改顶部的 MAP_ROTATION_DEGREES，不要直接写死弧度值。
+         * 改角度时优先改配置里的 map.rotationDegrees，不要直接写死弧度值。
          */
-        mapGroup.rotation.z = THREE.MathUtils.degToRad(MAP_ROTATION_DEGREES);
+        mapGroup.rotation.z = THREE.MathUtils.degToRad(
+          mapConfig.map.rotationDegrees
+        );
         const meshTargets = [
           ...featureEntries.flatMap(function flattenFeature(feature) {
             return feature.meshes;
@@ -839,12 +822,12 @@ function ThreeBlockMap({
         scene.background = new THREE.Color("#031525");
         scene.fog = new THREE.Fog(
           "#031525",
-          maxSpan * FOG_START_MULTIPLIER,
-          maxSpan * FOG_END_MULTIPLIER
+          maxSpan * mapConfig.lighting.fogStartMultiplier,
+          maxSpan * mapConfig.lighting.fogEndMultiplier
         );
 
         /**
-         * 默认展示角度由文件顶部那组 CAMERA_* 常量决定。
+         * 默认展示角度由配置对象里的 camera 字段决定。
          * 这里不再手写 position 数字，而是根据“旋转角度 + 倾斜度 + 距离”自动换算。
          */
         const camera = new THREE.PerspectiveCamera(
@@ -875,7 +858,7 @@ function ThreeBlockMap({
         );
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = RENDERER_EXPOSURE;
+        renderer.toneMappingExposure = mapConfig.lighting.rendererExposure;
         containerElement.appendChild(renderer.domElement);
 
         /**
@@ -914,12 +897,16 @@ function ThreeBlockMap({
         controls.minDistance = maxSpan * 0.45;
         controls.maxDistance = maxSpan * 2;
         controls.minPolarAngle = THREE.MathUtils.degToRad(
-          CAMERA_MIN_POLAR_DEGREES
+          mapConfig.camera.minPolarDegrees
         );
         controls.maxPolarAngle = THREE.MathUtils.degToRad(
-          CAMERA_MAX_POLAR_DEGREES
+          mapConfig.camera.maxPolarDegrees
         );
-        controls.target.set(0, 0, maxSpan * CAMERA_TARGET_Z_MULTIPLIER);
+        controls.target.set(
+          0,
+          0,
+          maxSpan * mapConfig.camera.targetZMultiplier
+        );
         controls.autoRotate = false;
         const markerBaseCameraDistance = camera.position.distanceTo(
           controls.target
@@ -1081,8 +1068,8 @@ function ThreeBlockMap({
           }
 
           const containerRect = containerElement.getBoundingClientRect();
-          tooltipRef.current.style.left = `${event.clientX - containerRect.left + TOOLTIP_OFFSET_X}px`;
-          tooltipRef.current.style.top = `${event.clientY - containerRect.top + TOOLTIP_OFFSET_Y}px`;
+          tooltipRef.current.style.left = `${event.clientX - containerRect.left + mapConfig.tooltip.offsetX}px`;
+          tooltipRef.current.style.top = `${event.clientY - containerRect.top + mapConfig.tooltip.offsetY}px`;
         }
 
         function handleBarPointerEnter(barEntry, event) {
@@ -1135,6 +1122,32 @@ function ThreeBlockMap({
             const handlePointerMove = function handlePointerMove(event) {
               handleBarPointerMove(barEntry, event);
             };
+            const handleWheel = function handleWheel(event) {
+              /**
+               * 点位 marker 是挂在 CSS2D DOM 层上的。
+               * 鼠标滚轮落在 marker 上时，事件不会自然传到底下的 renderer，
+               * OrbitControls 就会出现“有时缩放不触发”的感觉。
+               * 这里把 wheel 事件透传给 renderer，让缩放在点位区域也保持一致。
+               */
+              event.preventDefault();
+              renderer.domElement.dispatchEvent(
+                new WheelEvent("wheel", {
+                  deltaX: event.deltaX,
+                  deltaY: event.deltaY,
+                  deltaZ: event.deltaZ,
+                  clientX: event.clientX,
+                  clientY: event.clientY,
+                  screenX: event.screenX,
+                  screenY: event.screenY,
+                  ctrlKey: event.ctrlKey,
+                  shiftKey: event.shiftKey,
+                  altKey: event.altKey,
+                  metaKey: event.metaKey,
+                  bubbles: true,
+                  cancelable: true
+                })
+              );
+            };
 
             barEntry.markerElement.addEventListener(
               "pointerenter",
@@ -1148,6 +1161,9 @@ function ThreeBlockMap({
               "pointerleave",
               handleBarPointerLeave
             );
+            barEntry.markerElement.addEventListener("wheel", handleWheel, {
+              passive: false
+            });
 
             sceneRuntime.barPointerCleanupTasks.push(
               function cleanupBarPointerEventsForEntry() {
@@ -1162,6 +1178,10 @@ function ThreeBlockMap({
                 barEntry.markerElement.removeEventListener(
                   "pointerleave",
                   handleBarPointerLeave
+                );
+                barEntry.markerElement.removeEventListener(
+                  "wheel",
+                  handleWheel
                 );
               }
             );
@@ -1178,14 +1198,19 @@ function ThreeBlockMap({
           cleanupBarPointerEvents();
 
           if (sceneRuntime.barGroup) {
+            removeBarGroupElements(sceneRuntime.barGroup);
             scene.remove(sceneRuntime.barGroup);
           }
 
           const { barEntries, barGroup } = buildBarOverlays(
             featureEntries,
-            nextMapDistribution
+            nextMapDistribution,
+            bounds,
+            scale
           );
-          barGroup.rotation.z = THREE.MathUtils.degToRad(MAP_ROTATION_DEGREES);
+          barGroup.rotation.z = THREE.MathUtils.degToRad(
+            mapConfig.map.rotationDegrees
+          );
           scene.add(barGroup);
 
           sceneRuntime.barEntries = barEntries;
@@ -1254,6 +1279,43 @@ function ThreeBlockMap({
           updateHoverState(null);
         }
 
+        function handleMapClick(event) {
+          if (!mapConfig.interaction.enableMapClickLog) {
+            return;
+          }
+
+          const rect = renderer.domElement.getBoundingClientRect();
+          pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+          raycaster.setFromCamera(pointer, camera);
+          const intersections = raycaster.intersectObjects(meshTargets, false);
+          const clickedMesh = intersections[0]?.object;
+
+          if (!clickedMesh) {
+            return;
+          }
+
+          const localPoint = mapGroup.worldToLocal(
+            intersections[0].point.clone()
+          );
+          const coordinate = restoreCoordinate(localPoint, bounds.center, scale);
+
+          console.info("[MapClickPosition]", {
+            featureName: clickedMesh.userData.featureName || "-",
+            coordinate,
+            projectedPosition: {
+              x: Number(localPoint.x.toFixed(2)),
+              y: Number(localPoint.y.toFixed(2))
+            },
+            barDatumDraft: {
+              name: clickedMesh.userData.featureName || "自定义点位",
+              value: 1000,
+              coordinate
+            }
+          });
+        }
+
         const resizeObserver = new ResizeObserver(handleResize);
         resizeObserver.observe(containerElement);
         cleanupTasks.push(function cleanupResizeObserver() {
@@ -1265,6 +1327,7 @@ function ThreeBlockMap({
           "pointerleave",
           handlePointerLeave
         );
+        renderer.domElement.addEventListener("click", handleMapClick);
         cleanupTasks.push(function cleanupPointerEvents() {
           renderer.domElement.removeEventListener(
             "pointermove",
@@ -1274,6 +1337,7 @@ function ThreeBlockMap({
             "pointerleave",
             handlePointerLeave
           );
+          renderer.domElement.removeEventListener("click", handleMapClick);
         });
 
         function handleControlsEnd() {
@@ -1322,6 +1386,7 @@ function ThreeBlockMap({
           window.cancelAnimationFrame(animationFrameId);
           animationTimer.dispose();
           controls.dispose();
+          removeBarGroupElements(sceneRuntimeRef.current?.barGroup);
 
           scene.traverse(function disposeNode(node) {
             if (node.geometry) {
@@ -1413,7 +1478,7 @@ function ThreeBlockMap({
         name={tooltipData.name}
         value={tooltipData.value}
         metricColor={tooltipData.metricColor}
-        className={`pointer-events-none absolute left-0 top-0 z-20 transition-opacity ${tooltipData.visible ? "opacity-100" : "opacity-0"}`}
+        className={`pointer-events-none absolute left-0 top-0 z-[100000] transition-opacity ${tooltipData.visible ? "opacity-100" : "opacity-0"}`}
       />
       {showViewDebugPanel ? (
         <div className="pointer-events-none absolute bottom-4 left-4 z-10 max-w-[340px] rounded-2xl border border-cyan-400/20 bg-slate-950/60 px-4 py-3 backdrop-blur">
@@ -1423,15 +1488,15 @@ function ThreeBlockMap({
           <pre
             ref={viewDebugRef}
             className="mt-2 whitespace-pre-wrap text-xs leading-5 text-cyan-50">
-            MAP_ROTATION_DEGREES = {MAP_ROTATION_DEGREES}
+            map.rotationDegrees = {mapConfig.map.rotationDegrees}
             {"\n"}
-            CAMERA_AZIMUTH_DEGREES = {CAMERA_AZIMUTH_DEGREES}
+            camera.azimuthDegrees = {mapConfig.camera.azimuthDegrees}
             {"\n"}
-            CAMERA_TILT_DEGREES = {CAMERA_TILT_DEGREES}
+            camera.tiltDegrees = {mapConfig.camera.tiltDegrees}
             {"\n"}
-            CAMERA_DISTANCE_MULTIPLIER = {CAMERA_DISTANCE_MULTIPLIER}
+            camera.distanceMultiplier = {mapConfig.camera.distanceMultiplier}
             {"\n"}
-            CAMERA_TARGET_Z_MULTIPLIER = {CAMERA_TARGET_Z_MULTIPLIER}
+            camera.targetZMultiplier = {mapConfig.camera.targetZMultiplier}
           </pre>
         </div>
       ) : null}

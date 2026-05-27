@@ -1,5 +1,27 @@
 import dayjs from "dayjs";
 
+function formatOccurredAtDisplay(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const parsedValue = dayjs(value);
+
+  if (!parsedValue.isValid()) {
+    return "-";
+  }
+
+  if (parsedValue.isSame(dayjs(), "day")) {
+    return parsedValue.format("今日 HH:mm");
+  }
+
+  if (parsedValue.isSame(dayjs(), "year")) {
+    return parsedValue.format("M月D日 HH:mm");
+  }
+
+  return parsedValue.format("YYYY年M月D日 HH:mm");
+}
+
 /**
  * popup-view-model 专门负责“接口数据 -> 弹窗视图数据”的轻量整理。
  *
@@ -268,9 +290,7 @@ export function normalizeWarningDetail(responseData) {
      * 所以先统一使用告警态黄色。后续如果接口补充等级颜色，再按真实字段切换。
      */
     warningLevelColor: "#FFCC66",
-    occurredAt: detail?.occurred_at
-      ? dayjs(detail.occurred_at).format("YYYY-MM-DD HH:mm:ss")
-      : "-",
+    occurredAt: formatOccurredAtDisplay(detail?.occurred_at),
     metricLabel: detail?.metric_name || "-",
     measurementValue: detail?.metric_value || "-",
     location: detail?.hospital_name || detail?.department_name || "-",
@@ -297,13 +317,25 @@ export function normalizeDeviceListPopup(responseData, fallbackTitle) {
    * - filters.device_type_options
    * - summary.title
    * - items
+   *
+   * TODO:
+   * 这条接口的分页结构当前还没完全锁定。
+   * 这里先兼容 pagination，有就用；没有就按单页数据兜底。
+   * 等后端正式补全分页返回后，再回到这里把分页字段彻底收紧。
    */
   const filterConfig = responseData?.filters || {};
   const summary = responseData?.summary || {};
+  const pagination = responseData?.pagination || {};
   const deviceTypeOptions = Array.isArray(filterConfig?.device_type_options)
     ? filterConfig.device_type_options
     : [];
   const itemsSource = Array.isArray(responseData?.items) ? responseData.items : [];
+  const currentPage = toNumber(pagination?.page) || 1;
+  const pageSize = toNumber(pagination?.page_size) || itemsSource.length || 10;
+  const totalCount = toNumber(pagination?.total) ?? itemsSource.length;
+  const totalPages =
+    toNumber(pagination?.total_pages) ||
+    Math.max(1, Math.ceil(totalCount / Math.max(pageSize, 1)));
 
   return {
     title: summary?.title || fallbackTitle,
@@ -329,6 +361,16 @@ export function normalizeDeviceListPopup(responseData, fallbackTitle) {
         patientName: item?.patient_name || "-",
       };
     }),
+    pagination: {
+      page: currentPage,
+      pageSize,
+      total: totalCount,
+      totalPages,
+      hasMore:
+        typeof pagination?.has_more === "boolean"
+          ? pagination.has_more
+          : currentPage < totalPages,
+    },
   };
 }
 

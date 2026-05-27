@@ -6,11 +6,7 @@ import { getMeasurementPopup } from "@/api";
 import ScreenProgress from "@/app/components/screen-progress";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shadcn/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-} from "@/shadcn/ui/dialog";
+import { Dialog, DialogClose, DialogContent } from "@/shadcn/ui/dialog";
 import { ScrollArea } from "@/shadcn/ui/scroll-area";
 
 const EMPTY_MEASUREMENT_DIALOG_DATA = {
@@ -19,7 +15,7 @@ const EMPTY_MEASUREMENT_DIALOG_DATA = {
   normalRatio: 0,
   abnormalRatio: 0,
   normalCount: 0,
-  comparisonItems: [],
+  comparisonItems: []
 };
 
 function toDialogNumber(value) {
@@ -67,9 +63,9 @@ function mapMeasurementDialogData(responseData) {
         measurementCount: toDialogNumber(item?.measurement_count),
         abnormalCount: toDialogNumber(item?.abnormal_count),
         abnormalRate: toDialogNumber(item?.abnormal_rate),
-        isCurrent: Boolean(item?.is_current),
+        isCurrent: Boolean(item?.is_current)
       };
-    }),
+    })
   };
 }
 
@@ -85,7 +81,8 @@ function LeftL1({ measurementStatistics, dashboardStatus, dashboardError }) {
       style={{
         background:
           "linear-gradient(rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
-      }}>
+      }}
+    >
       <div className="w-full flex items-center mb-3">
         <h3 className="text-sm text-[#9FB5DA]">检测项目数据统计</h3>
         <div
@@ -93,30 +90,36 @@ function LeftL1({ measurementStatistics, dashboardStatus, dashboardError }) {
           style={{
             background:
               "linear-gradient(to right, rgba(0, 231, 255, 0.35) 0%, transparent 100%)"
-          }}></div>
+          }}
+        ></div>
       </div>
       <div className="flex-1 h-0 mb-4">
         <ScrollArea className={cn("h-full")}>
           {measurementItems.length > 0 ? (
             <div className="pr-2">
-              {measurementItems.map(function renderMeasurementItem(item, index) {
-                return (
-                  <ProgressBlock
-                    key={`${item.title}-${item.value}`}
-                    title={item.title}
-                    value={item.value}
-                    progress={item.progress}
-                    colors={item.colors}
-                    className={index === 0 ? "" : "pt-4"}
-                    onClick={function handleClick() {
-                      setActiveMeasurementItem(item);
-                    }}
-                  />
-                );
-              })}
+              {measurementItems.map(
+                function renderMeasurementItem(item, index) {
+                  return (
+                    <ProgressBlock
+                      key={`${item.title}-${item.value}`}
+                      title={item.title}
+                      value={item.value}
+                      progress={item.progress}
+                      colors={item.colors}
+                      className={index === 0 ? "" : "pt-4"}
+                      onClick={function handleClick() {
+                        setActiveMeasurementItem(item);
+                      }}
+                    />
+                  );
+                }
+              )}
             </div>
           ) : (
-            <StatusPlaceholder status={dashboardStatus} error={dashboardError} />
+            <StatusPlaceholder
+              status={dashboardStatus}
+              error={dashboardError}
+            />
           )}
         </ScrollArea>
       </div>
@@ -128,13 +131,19 @@ function LeftL1({ measurementStatistics, dashboardStatus, dashboardError }) {
               ? "..."
               : isError
                 ? "-"
-                : (measurementStatistics?.totalMeasurements || 0).toLocaleString("zh-CN")}
+                : (
+                    measurementStatistics?.totalMeasurements || 0
+                  ).toLocaleString("zh-CN")}
           </span>
         </div>
         <div className=" rounded-[50px] bd1 border-[#00E7FF]/35 flex-1 ml-4 px-5 py-2">
           <h5 className="text-[#9FB5DA] text-xs mb-1">异常数据占比</h5>
           <span className="text-[22px] text-[#986df7] leading-none">
-            {isLoading ? "..." : isError ? "-" : measurementStatistics?.abnormalRatio || "-"}
+            {isLoading
+              ? "..."
+              : isError
+                ? "-"
+                : measurementStatistics?.abnormalRatio || "-"}
           </span>
         </div>
       </div>
@@ -160,7 +169,8 @@ function ProgressBlock({ title, value, progress, colors, className, onClick }) {
         "cursor-pointer rounded-xl transition-colors hover:bg-white/[0.03]",
         className
       )}
-      onClick={onClick}>
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between">
         <h5 className="text-[13px] text-[#E8F0FF] leading-none tracking-[0.04em]">
           {title}
@@ -189,7 +199,7 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
   const [dialogState, setDialogState] = useState({
     status: "idle",
     data: EMPTY_MEASUREMENT_DIALOG_DATA,
-    error: null,
+    error: null
   });
 
   useEffect(
@@ -198,7 +208,7 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
         setDialogState({
           status: "idle",
           data: EMPTY_MEASUREMENT_DIALOG_DATA,
-          error: null,
+          error: null
         });
 
         return;
@@ -210,7 +220,7 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
         return {
           status: "loading",
           data: EMPTY_MEASUREMENT_DIALOG_DATA,
-          error: null,
+          error: null
         };
       });
 
@@ -221,7 +231,7 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
          * 1. 首页主接口里的 metric_key
          * 2. 当前卡片展示的中文 title
          */
-        metric: activeMeasurementItem.metricKey || activeMeasurementItem.title,
+        metric: activeMeasurementItem.metricKey || activeMeasurementItem.title
       })
         .then(function handleSuccess(responseData) {
           if (disposed) {
@@ -231,7 +241,7 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
           setDialogState({
             status: "success",
             data: mapMeasurementDialogData(responseData),
-            error: null,
+            error: null
           });
         })
         .catch(function handleError(error) {
@@ -243,7 +253,7 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
             return {
               status: "error",
               data: EMPTY_MEASUREMENT_DIALOG_DATA,
-              error,
+              error
             };
           });
         });
@@ -267,13 +277,15 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
     <Dialog open={Boolean(activeMeasurementItem)} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="w-[760px] max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 sm:max-w-[760px]">
+        className="w-[760px] max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 sm:max-w-[760px]"
+      >
         <div
           className="bd1 flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-2xl px-4 py-4"
           style={{
             background:
               "radial-gradient(ellipse at left 10% top 10%, rgb(0 231 255 / 10%), transparent 55%),linear-gradient(to bottom,rgb(11 21 48 / 85%) 0%, rgb(11 21 48 / 55%) 100%)"
-          }}>
+          }}
+        >
           <div className="w-full flex items-center justify-between mb-2">
             <h2 className="text-base text-white font-bold">
               {activeMeasurementItem
@@ -289,7 +301,8 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
                     size="xs"
                     className="bg-[#1D3B7A]/75 rounded-[10px] w-12 h-7 text-xs border-[#1D3B7A]/75 leading-none hover:bg-[#00E7FF]/20 text-[#E8F0FF] font-thin"
                   />
-                }>
+                }
+              >
                 关闭
               </DialogClose>
             </div>
@@ -317,14 +330,17 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
                 </span>
               </div>
             </div>
-            <h2 className="my-3 text-base font-bold text-white">测量值与异常值占比</h2>
+            <h2 className="my-3 text-base font-bold text-white">
+              测量值与异常值占比
+            </h2>
             <div className="bg-[rgba(29,59,122,0.2)] p-3">
               <div className="flex items-center">
                 <span className="w-20">正常值:</span>
                 <div className="relative h-6 flex-1 overflow-hidden rounded-[5px]">
                   <div
                     className="h-full bg-[rgba(0,231,255,0.6)]"
-                    style={{ width: normalRatioPercent }}></div>
+                    style={{ width: normalRatioPercent }}
+                  ></div>
                   <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs leading-none text-[#E8F0FF]">
                     {dialogState.status === "loading"
                       ? "..."
@@ -346,7 +362,8 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
                 <div className="relative h-6 flex-1 overflow-hidden rounded-[5px]">
                   <div
                     className="h-full bg-[#ad4b52]"
-                    style={{ width: abnormalRatioPercent }}></div>
+                    style={{ width: abnormalRatioPercent }}
+                  ></div>
                   <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs leading-none text-[#E8F0FF]">
                     {dialogState.status === "loading"
                       ? "..."
@@ -364,33 +381,44 @@ function MeasurementDialog({ activeMeasurementItem, onOpenChange }) {
                 </span>
               </div>
             </div>
-            <h2 className="my-3 text-base font-bold text-white">所有指标对比</h2>
+            <h2 className="my-3 text-base font-bold text-white">
+              所有指标对比
+            </h2>
             <div className="min-h-0 flex-1 overflow-hidden">
               {/* 底部列表单独滚动，避免数据过长时把整个弹窗高度撑出视口。 */}
-              <ScrollArea className="h-full pr-2">
+              <ScrollArea
+                className="pr-2 h-[450px]"
+                orientation="vertical"
+                showScrollbar
+                showScrollbarOnHover={false}
+              >
                 <div className="space-y-2 pr-2">
-                  {dialogData.comparisonItems.map(function renderComparisonItem(item) {
-                    return (
-                      <div
-                        key={item.id}
-                        className={cn(
-                          "rounded-[3px] bg-[rgba(29,59,122,0.2)] p-3 transition-colors duration-300 hover:bg-[rgba(29,59,122,0.4)]",
-                          "flex items-center justify-between",
-                          item.isCurrent ? "border border-[#00E7FF]/35" : ""
-                        )}>
-                        <span className="text-sm leading-none text-[#e8f0ff]">
-                          {item.name}
-                        </span>
-                        <span className="text-sm leading-none text-[rgba(159,181,218,0.9)]">
-                          <span className="mr-1">
-                            测量: {item.measurementCount.toLocaleString("zh-CN")}
+                  {dialogData.comparisonItems.map(
+                    function renderComparisonItem(item) {
+                      return (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "rounded-[3px] bg-[rgba(29,59,122,0.2)] p-3 transition-colors duration-300 hover:bg-[rgba(29,59,122,0.4)]",
+                            "flex items-center justify-between",
+                            item.isCurrent ? "border border-[#00E7FF]/35" : ""
+                          )}
+                        >
+                          <span className="text-sm leading-none text-[#e8f0ff]">
+                            {item.name}
                           </span>
-                          异常: {item.abnormalCount.toLocaleString("zh-CN")}(
-                          {Math.round(item.abnormalRate)}%)
-                        </span>
-                      </div>
-                    );
-                  })}
+                          <span className="text-sm leading-none text-[rgba(159,181,218,0.9)]">
+                            <span className="mr-1">
+                              测量:{" "}
+                              {item.measurementCount.toLocaleString("zh-CN")}
+                            </span>
+                            异常: {item.abnormalCount.toLocaleString("zh-CN")}(
+                            {Math.round(item.abnormalRate)}%)
+                          </span>
+                        </div>
+                      );
+                    }
+                  )}
                 </div>
                 <DialogStatus
                   status={dialogState.status}
@@ -423,7 +451,11 @@ function StatusPlaceholder({ status, error }) {
 
 function DialogStatus({ status, error, empty, emptyText }) {
   if (status === "loading") {
-    return <div className="py-8 text-center text-sm text-[#9FB5DA]">弹窗数据加载中...</div>;
+    return (
+      <div className="py-8 text-center text-sm text-[#9FB5DA]">
+        弹窗数据加载中...
+      </div>
+    );
   }
 
   if (status === "error") {
@@ -435,7 +467,9 @@ function DialogStatus({ status, error, empty, emptyText }) {
   }
 
   if (empty) {
-    return <div className="py-8 text-center text-sm text-[#9FB5DA]">{emptyText}</div>;
+    return (
+      <div className="py-8 text-center text-sm text-[#9FB5DA]">{emptyText}</div>
+    );
   }
 
   return null;

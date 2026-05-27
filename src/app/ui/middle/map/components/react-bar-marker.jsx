@@ -8,19 +8,17 @@ export const BAR_WARNING_THRESHOLD = 800;
 const MARKER_DOT_ANCHOR_Y = 42;
 
 export const BAR_NORMAL_STYLE = {
-  barColor: "#68F2FF",
-  glowColor: "rgba(104, 242, 255, 0.32)",
-  valueTextColor: "#A8F6FF",
+  barColor: "#69e3fb",
+  valueTextColor: "#69e3fb",
   valueBorderColor: "rgba(93, 233, 255, 0.86)",
   valueBackground: "rgba(11, 43, 82, 0.94)",
-  nameTextColor: "#A8F6FF",
+  nameTextColor: "#69e3fb",
   nameBorderColor: "rgba(93, 233, 255, 0.82)",
   nameBackground: "rgba(8, 49, 86, 0.74)"
 };
 
 export const BAR_WARNING_STYLE = {
   barColor: "#FFD34D",
-  glowColor: "rgba(255, 211, 77, 0.3)",
   valueTextColor: "#FFE680",
   valueBorderColor: "rgba(255, 211, 77, 0.86)",
   valueBackground: "rgba(73, 56, 9, 0.94)",
@@ -31,7 +29,6 @@ export const BAR_WARNING_STYLE = {
 
 export const BAR_DANGER_STYLE = {
   barColor: "#FF4E58",
-  glowColor: "rgba(255, 78, 88, 0.34)",
   valueTextColor: "#FF9CA2",
   valueBorderColor: "rgba(255, 78, 88, 0.88)",
   valueBackground: "rgba(72, 9, 17, 0.94)",
@@ -85,31 +82,28 @@ function ReactBarMarker({
         }}>
         <div className="h-fit flex flex-col items-center">
           <div
-            className="w-2 h-10"
+            className="w-1.5 h-10"
             style={{
               background: `linear-gradient(180deg, ${style.valueTextColor} 0%, ${style.barColor} 100%)`,
-              boxShadow: `0 0 18px ${style.glowColor}`,
               transition: "all 160ms ease"
             }}></div>
           <div
-            className="rounded-full w-3 h-3 -mt-1"
+            className="rounded-full w-2.5 h-2.5 -mt-1"
             style={{
               background: style.barColor,
-              boxShadow: `0 0 16px ${style.glowColor}`,
               transition: "all 160ms ease"
             }}></div>
         </div>
         <div
           style={{
-            minWidth: "48px",
-            padding: "3px 10px",
-            borderRadius: "6px",
+            minWidth: "40px",
+            padding: "2px 8px",
+            borderRadius: "4px",
             border: `1px solid ${style.valueBorderColor}`,
             background: style.valueBackground,
-            boxShadow: `0 0 18px ${style.glowColor}`,
             color: style.valueTextColor,
             fontSize: "12px",
-            fontWeight: "700",
+            fontWeight: "400",
             lineHeight: "1",
             textAlign: "center",
             fontVariantNumeric: "tabular-nums",
@@ -125,7 +119,6 @@ function ReactBarMarker({
             borderRadius: "999px",
             border: `1px solid ${style.nameBorderColor}`,
             background: style.nameBackground,
-            boxShadow: `0 0 18px ${style.glowColor}`,
             color: style.nameTextColor,
             fontSize: "11px",
             fontWeight: "500",
@@ -160,6 +153,7 @@ export function createReactBarMarkerObject({
   );
 
   const markerObject = new CSS2DObject(markerElement);
+  markerObject.renderOrder = 20;
   markerObject.center.set(0, 0);
   markerObject.position.set(x, y, z);
 

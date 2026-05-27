@@ -42,12 +42,20 @@ const deviceSummaryColumns = [
 function DeviceMonitorDialogRoot() {
   const [activeDeviceDetail, setActiveDeviceDetail] = useState(null);
   const [selectedDeviceType, setSelectedDeviceType] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [dialogState, setDialogState] = useState({
     status: "idle",
     data: {
       title: dialogTitleMap.all,
       deviceOptions: [{ label: "筛选设备", value: "" }],
       items: [],
+      pagination: {
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        totalPages: 1,
+        hasMore: false,
+      },
     },
     error: null,
   });
@@ -85,6 +93,24 @@ function DeviceMonitorDialogRoot() {
     setActiveDeviceDetail(deviceItem);
   }
 
+  function handleDeviceTypeChange(nextDeviceType) {
+    setCurrentPage(1);
+    setSelectedDeviceType(nextDeviceType);
+  }
+
+  function handlePreviousPage() {
+    setCurrentPage(function getPreviousPage(previousPage) {
+      return Math.max(1, previousPage - 1);
+    });
+  }
+
+  function handleNextPage() {
+    setCurrentPage(function getNextPage(previousPage) {
+      const totalPages = dialogState.data.pagination?.totalPages || 1;
+      return Math.min(totalPages, previousPage + 1);
+    });
+  }
+
   useEffect(
     function requestDeviceListPopup() {
       if (!isOpen) {
@@ -109,6 +135,11 @@ function DeviceMonitorDialogRoot() {
          * - hospital_name
          * - device_type
          *
+         * TODO:
+         * 设备列表接口当前还没有确认真实分页能力是否已经上线。
+         * 这里先把 page / page_size 的调用位预留出来，
+         * 等后端正式补充分页参数和分页返回结构后，再回到这里接真分页逻辑。
+         *
          * device_type 先按文档参数语义保留原始值，
          * 不再额外把“筛选设备”推断成 all。
          */
@@ -116,6 +147,8 @@ function DeviceMonitorDialogRoot() {
         device_status: dialogPayload?.deviceStatus,
         hospital_name: dialogPayload?.hospitalName,
         device_type: selectedDeviceType,
+        page: currentPage,
+        page_size: dialogState.data.pagination?.pageSize || 10,
       })
         .then(function handleSuccess(responseData) {
           if (disposed) {
@@ -149,13 +182,22 @@ function DeviceMonitorDialogRoot() {
         disposed = true;
       };
     },
-    [dialogPayload?.deviceStatus, dialogPayload?.hospitalName, dialogPayload?.title, dialogType, isOpen, selectedDeviceType]
+    [
+      currentPage,
+      dialogPayload?.deviceStatus,
+      dialogPayload?.hospitalName,
+      dialogPayload?.title,
+      dialogType,
+      isOpen,
+      selectedDeviceType
+    ]
   );
 
   useEffect(
     function resetDeviceFilterWhenDialogChanges() {
       if (!isOpen) {
         setSelectedDeviceType("");
+        setCurrentPage(1);
       }
     },
     [isOpen]
@@ -180,7 +222,7 @@ function DeviceMonitorDialogRoot() {
               <DeviceMonitorFilterSelect
                 value={selectedDeviceType}
                 options={dialogState.data.deviceOptions}
-                onValueChange={setSelectedDeviceType}
+                onValueChange={handleDeviceTypeChange}
               />
             </div>
             <div className="pl-3">
@@ -216,6 +258,12 @@ function DeviceMonitorDialogRoot() {
               emptyText="暂无设备列表数据"
             />
           </ScrollArea>
+          <DeviceListPagination
+            pagination={dialogState.data.pagination}
+            disabled={dialogState.status === "loading"}
+            onPreviousPage={handlePreviousPage}
+            onNextPage={handleNextPage}
+          />
         </div>
       </DialogContent>
       <DeviceMonitorDetailDialog
@@ -224,6 +272,57 @@ function DeviceMonitorDialogRoot() {
         onOpenChange={handleDetailOpenChange}
       />
     </Dialog>
+  );
+}
+
+function DeviceListPagination({
+  pagination,
+  disabled = false,
+  onPreviousPage,
+  onNextPage
+}) {
+  /**
+   * TODO:
+   * 当前分页条先按“兼容单页展示”保留在底部。
+   * 如果后端暂时还没返回 pagination，这里会退化成 1 / 1。
+   * 等接口正式补充分页后，再把页码、总数、上一页/下一页行为切到真实分页数据。
+   */
+  const currentPage = pagination?.page || 1;
+  const totalPages = pagination?.totalPages || 1;
+  const totalCount = pagination?.total || 0;
+  const canGoPrevious = !disabled && currentPage > 1;
+  const canGoNext =
+    !disabled &&
+    (typeof pagination?.hasMore === "boolean"
+      ? pagination.hasMore
+      : currentPage < totalPages);
+
+  return (
+    <div className="mt-3 flex items-center justify-between border-t border-[#1D3B7A]/35 pt-3">
+      <span className="text-xs text-[#9FB5DA]">
+        共 {totalCount} 条，第 {currentPage} / {Math.max(totalPages, 1)} 页
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          disabled={!canGoPrevious}
+          className="h-8 rounded-[10px] border-[#1D3B7A]/75 bg-[#0B1530]/35 px-3 text-xs text-[#E8F0FF] hover:bg-[#00E7FF]/20"
+          onClick={onPreviousPage}>
+          上一页
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          disabled={!canGoNext}
+          className="h-8 rounded-[10px] border-[#1D3B7A]/75 bg-[#0B1530]/35 px-3 text-xs text-[#E8F0FF] hover:bg-[#00E7FF]/20"
+          onClick={onNextPage}>
+          下一页
+        </Button>
+      </div>
+    </div>
   );
 }
 

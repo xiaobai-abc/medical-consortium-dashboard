@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import ScreenLineTrendChart from "@/app/components/screen-line-trend-chart";
 import { Button } from "@/shadcn/ui/button";
@@ -13,11 +13,30 @@ import {
 } from "@/shadcn/ui/select";
 import { cn } from "../../../lib/utils";
 
+const METRIC_BUTTON_GAP = 8;
+const METRIC_SELECT_WIDTH = 112;
+
 function LeftL2({ warningTrends, dashboardStatus, dashboardError }) {
   const trendMetricList = warningTrends?.metrics || [];
+  const metricLayoutSignature = useMemo(
+    function buildMetricLayoutSignature() {
+      return trendMetricList
+        .map(function mapMetric(item) {
+          return `${item.key}:${item.label}`;
+        })
+        .join("|");
+    },
+    [trendMetricList]
+  );
   const [activeMetricKey, setActiveMetricKey] = useState(
     warningTrends?.defaultMetricKey || trendMetricList[0]?.key || ""
   );
+  const [visiblePrimaryMetricCount, setVisiblePrimaryMetricCount] = useState(
+    trendMetricList.length
+  );
+  const metricControlRowRef = useRef(null);
+  const primaryMetricRowRef = useRef(null);
+  const metricMeasureRefs = useRef(new Map());
   const activeMetric =
     trendMetricList.find(function findMetric(item) {
       return item.key === activeMetricKey;
@@ -28,8 +47,8 @@ function LeftL2({ warningTrends, dashboardStatus, dashboardError }) {
   const values = activeMetric?.data?.map(function mapValue(item) {
     return item.value;
   }) || [];
-  const primaryMetricList = trendMetricList.slice(0, 4);
-  const secondaryMetricList = trendMetricList.slice(4);
+  const primaryMetricList = trendMetricList.slice(0, visiblePrimaryMetricCount);
+  const secondaryMetricList = trendMetricList.slice(visiblePrimaryMetricCount);
   const isActiveMetricInSelect = secondaryMetricList.some(
     function hasMetric(item) {
       return item.key === activeMetricKey;
@@ -57,6 +76,101 @@ function LeftL2({ warningTrends, dashboardStatus, dashboardError }) {
     [activeMetricKey, hasTrendData, trendMetricList, warningTrends?.defaultMetricKey]
   );
 
+  useLayoutEffect(
+    function syncVisiblePrimaryMetricCount() {
+      const metricControlRowElement = metricControlRowRef.current;
+
+      if (!metricControlRowElement || trendMetricList.length === 0) {
+        setVisiblePrimaryMetricCount(0);
+        return;
+      }
+
+      function getMetricButtonWidth(item) {
+        return metricMeasureRefs.current.get(item.key)?.offsetWidth || 0;
+      }
+
+      function getMetricsTotalWidth(metricList) {
+        return metricList.reduce(function sumMetricWidth(totalWidth, item, index) {
+          const metricWidth = getMetricButtonWidth(item);
+
+          if (metricWidth === 0) {
+            return totalWidth;
+          }
+
+          return totalWidth + metricWidth + (index === 0 ? 0 : METRIC_BUTTON_GAP);
+        }, 0);
+      }
+
+      function updateVisibleMetricCount() {
+        const availableRowWidth = metricControlRowElement.clientWidth;
+        const allMetricsWidth = getMetricsTotalWidth(trendMetricList);
+        let nextVisibleCount = 0;
+        let usedWidth = 0;
+
+        if (allMetricsWidth <= availableRowWidth) {
+          setVisiblePrimaryMetricCount(function updateCount(previousCount) {
+            return previousCount === trendMetricList.length
+              ? previousCount
+              : trendMetricList.length;
+          });
+          return;
+        }
+
+        const availablePrimaryWidth = Math.max(
+          0,
+          availableRowWidth - METRIC_SELECT_WIDTH - METRIC_BUTTON_GAP
+        );
+
+        for (let index = 0; index < trendMetricList.length; index += 1) {
+          const item = trendMetricList[index];
+          const metricWidth = getMetricButtonWidth(item);
+
+          if (metricWidth === 0) {
+            break;
+          }
+          const nextUsedWidth =
+            index === 0
+              ? metricWidth
+              : usedWidth + METRIC_BUTTON_GAP + metricWidth;
+
+          if (nextUsedWidth > availablePrimaryWidth) {
+            break;
+          }
+
+          usedWidth = nextUsedWidth;
+          nextVisibleCount += 1;
+        }
+
+        setVisiblePrimaryMetricCount(function updateCount(previousCount) {
+          return previousCount === nextVisibleCount
+            ? previousCount
+            : nextVisibleCount;
+        });
+      }
+
+      let animationFrameId = 0;
+      function scheduleVisibleMetricCountUpdate() {
+        window.cancelAnimationFrame(animationFrameId);
+        animationFrameId = window.requestAnimationFrame(
+          updateVisibleMetricCount
+        );
+      }
+
+      scheduleVisibleMetricCountUpdate();
+
+      const resizeObserver = new ResizeObserver(
+        scheduleVisibleMetricCountUpdate
+      );
+      resizeObserver.observe(metricControlRowElement);
+
+      return function cleanupResizeObserver() {
+        resizeObserver.disconnect();
+        window.cancelAnimationFrame(animationFrameId);
+      };
+    },
+    [metricLayoutSignature, trendMetricList.length]
+  );
+
   return (
     <div
       className="w-full h-[320px] bd1 rounded-2xl px-3.5 py-4 flex flex-col"
@@ -75,14 +189,15 @@ function LeftL2({ warningTrends, dashboardStatus, dashboardError }) {
         />
       </div>
       {/* 选择部分 */}
-      <div className="mb-3 flex items-center gap-x-2">
-        <div className="flex min-w-0 flex-1 flex-wrap">
-          {primaryMetricList.map(function renderPrimaryMetric(item, index) {
+      <div ref={metricControlRowRef} className="mb-3 flex items-center gap-x-2">
+        <div
+          ref={primaryMetricRowRef}
+          className="flex min-w-0 flex-1 flex-nowrap gap-2 overflow-hidden">
+          {primaryMetricList.map(function renderPrimaryMetric(item) {
             return (
               <MetricButton
                 key={item.key}
                 isActive={item.key === activeMetricKey}
-                className={index === 0 ? "" : "ml-2"}
                 onClick={function handleClick() {
                   setActiveMetricKey(item.key);
                 }}>
@@ -91,34 +206,54 @@ function LeftL2({ warningTrends, dashboardStatus, dashboardError }) {
             );
           })}
         </div>
-        <div className="w-[112px] shrink-0">
-          <Select
-            value={isActiveMetricInSelect ? activeMetricKey : ""}
-            disabled={!hasTrendData}
-            onValueChange={function handleValueChange(value) {
-              setActiveMetricKey(value);
-            }}>
-            <SelectTrigger
-              className="h-8 w-full min-w-0 rounded-[10px] border border-[#7F69D7]/55 bg-[rgba(12,24,52,0.88)] px-3 text-xs text-[#D6E0F5] hover:bg-[rgba(16,30,61,0.96)]"
-              size="sm">
-              <SelectValue className="min-w-0 truncate">
-                {isActiveMetricInSelect ? activeMetric.label : "更多指标"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="border border-[#7F69D7]/35 bg-[rgba(9,18,38,0.96)] text-[#D6E0F5]">
-              {secondaryMetricList.map(function renderSecondaryMetric(item) {
-                return (
-                  <SelectItem
-                    key={item.key}
-                    value={item.key}
-                    className="rounded-[8px] text-xs focus:bg-[#776cdb]/18 focus:text-white">
-                    {item.label}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
+        {secondaryMetricList.length > 0 ? (
+          <div className="w-[112px] shrink-0">
+            <Select
+              value={isActiveMetricInSelect ? activeMetricKey : ""}
+              disabled={!hasTrendData}
+              onValueChange={function handleValueChange(value) {
+                setActiveMetricKey(value);
+              }}>
+              <SelectTrigger
+                className="h-8 w-full min-w-0 rounded-[10px] border border-[#7F69D7]/55 bg-[rgba(12,24,52,0.88)] px-3 text-xs text-[#D6E0F5] hover:bg-[rgba(16,30,61,0.96)]"
+                size="sm">
+                <SelectValue className="min-w-0 truncate">
+                  {isActiveMetricInSelect ? activeMetric.label : "更多指标"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="border border-[#7F69D7]/35 bg-[rgba(9,18,38,0.96)] text-[#D6E0F5]">
+                {secondaryMetricList.map(function renderSecondaryMetric(item) {
+                  return (
+                    <SelectItem
+                      key={item.key}
+                      value={item.key}
+                      className="rounded-[8px] text-xs focus:bg-[#776cdb]/18 focus:text-white">
+                      {item.label}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+      </div>
+      <div className="pointer-events-none invisible fixed -left-[9999px] top-0 flex gap-2">
+        {trendMetricList.map(function renderMetricMeasure(item) {
+          return (
+            <div
+              key={item.key}
+              ref={function setMetricMeasureElement(element) {
+                if (element) {
+                  metricMeasureRefs.current.set(item.key, element);
+                  return;
+                }
+
+                metricMeasureRefs.current.delete(item.key);
+              }}>
+              <MetricButton isActive={false}>{item.label}</MetricButton>
+            </div>
+          );
+        })}
       </div>
       <div className="flex-1 rounded-2xl border border-[#7F69D7]/18 bg-[rgba(10,23,47,0.45)] px-3 py-3">
         {hasTrendData ? (

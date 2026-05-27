@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import dynamic from "next/dynamic";
 
 const ThreeBlockMap = dynamic(
@@ -18,7 +19,32 @@ const ThreeBlockMap = dynamic(
   }
 );
 
-function MainMap({ mapDistribution }) {
+function getMapDistributionSignature(mapDistribution) {
+  if (!mapDistribution) {
+    return "empty";
+  }
+
+  const districtSignature = Array.isArray(mapDistribution.hangzhou_districts)
+    ? [...mapDistribution.hangzhou_districts]
+        .map(function mapDistrictItem(item) {
+          return [
+            String(item?.name || "").trim(),
+            String(item?.value ?? ""),
+            String(item?.height ?? "")
+          ].join(":");
+        })
+        .sort()
+        .join("|")
+    : "no-districts";
+
+  return [
+    String(mapDistribution.source || ""),
+    String(mapDistribution.group_by || ""),
+    districtSignature
+  ].join("::");
+}
+
+function MainMapComponent({ mapDistribution }) {
   return (
     <div
       className="w-full flex-1 h-0 mb-3 bd1 rounded-2xl px-3.5 py-4 flex flex-col"
@@ -54,5 +80,15 @@ function MainMap({ mapDistribution }) {
     </div>
   );
 }
+
+const MainMap = memo(
+  MainMapComponent,
+  function areMainMapPropsEqual(previousProps, nextProps) {
+    return (
+      getMapDistributionSignature(previousProps.mapDistribution) ===
+      getMapDistributionSignature(nextProps.mapDistribution)
+    );
+  }
+);
 
 export default MainMap;
