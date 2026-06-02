@@ -134,6 +134,24 @@ function ReactBarMarker({
   );
 }
 
+function getReactBarMarkerMarkup({
+  name = "测试标记",
+  value = "1280",
+  metricValue
+}) {
+  const resolvedMetricValue =
+    typeof metricValue === "number" ? metricValue : Number(value) || 0;
+  const barStyle = getBarVisualStyle(resolvedMetricValue);
+
+  return {
+    markup: renderToStaticMarkup(
+      <ReactBarMarker name={name} value={value} style={barStyle} />
+    ),
+    style: barStyle,
+    metricValue: resolvedMetricValue
+  };
+}
+
 export function createReactBarMarkerObject({
   x = 0,
   y = 0,
@@ -144,13 +162,13 @@ export function createReactBarMarkerObject({
 }) {
   const markerElement = document.createElement("div");
   markerElement.style.overflow = "visible";
-  const resolvedMetricValue =
-    typeof metricValue === "number" ? metricValue : Number(value) || 0;
-  const barStyle = getBarVisualStyle(resolvedMetricValue);
+  const markerMarkup = getReactBarMarkerMarkup({
+    name,
+    value,
+    metricValue
+  });
 
-  markerElement.innerHTML = renderToStaticMarkup(
-    <ReactBarMarker name={name} value={value} style={barStyle} />
-  );
+  markerElement.innerHTML = markerMarkup.markup;
 
   const markerObject = new CSS2DObject(markerElement);
   markerObject.renderOrder = 20;
@@ -160,8 +178,39 @@ export function createReactBarMarkerObject({
   return {
     markerObject,
     markerElement,
-    style: barStyle,
-    metricValue: resolvedMetricValue
+    style: markerMarkup.style,
+    metricValue: markerMarkup.metricValue
+  };
+}
+
+export function updateReactBarMarkerObject(
+  markerObject,
+  markerElement,
+  {
+    x = 0,
+    y = 0,
+    z = 0,
+    name = "测试标记",
+    value = "1280",
+    metricValue
+  }
+) {
+  if (!markerObject || !markerElement) {
+    return null;
+  }
+
+  const markerMarkup = getReactBarMarkerMarkup({
+    name,
+    value,
+    metricValue
+  });
+
+  markerObject.position.set(x, y, z);
+  markerElement.innerHTML = markerMarkup.markup;
+
+  return {
+    style: markerMarkup.style,
+    metricValue: markerMarkup.metricValue
   };
 }
 

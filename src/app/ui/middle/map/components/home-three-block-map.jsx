@@ -12,7 +12,8 @@ import {
   MapDetailTooltipCard,
   createReactBarMarkerObject,
   getBarHeight,
-  getBarVisualStyle
+  getBarVisualStyle,
+  updateReactBarMarkerObject
 } from "./react-bar-marker";
 import { hangzhouDistrictCoordinateMap } from "./home-district-coordinate-map";
 import homeThreeBlockMapConfig from "./home-three-block-map-config";
@@ -485,9 +486,7 @@ function buildDistrictMeshes(featureCollection) {
   };
 }
 
-function buildBarOverlays(featureEntries, mapDistribution, bounds, scale) {
-  const barEntries = [];
-  const barGroup = new THREE.Group();
+function getNormalizedBarData(featureEntries, mapDistribution) {
   const baseMarkerZ = mapConfig.map.blockHeight + 2;
   const districtItems = Array.isArray(mapDistribution?.hangzhou_districts)
     ? mapDistribution.hangzhou_districts
@@ -497,7 +496,7 @@ function buildBarOverlays(featureEntries, mapDistribution, bounds, scale) {
       return [normalizeDistrictName(item?.name), item];
     })
   );
-  const normalizedBarData = featureEntries.map(function mapFeatureEntry(featureEntry) {
+  return featureEntries.map(function mapFeatureEntry(featureEntry) {
     const matchedDistrictItem = districtItemMap.get(
       normalizeDistrictName(featureEntry.featureName)
     );
@@ -510,15 +509,25 @@ function buildBarOverlays(featureEntries, mapDistribution, bounds, scale) {
       name: featureEntry.featureName,
       metricValue,
       featureEntry,
+      baseMarkerZ
     };
   });
+}
+
+function buildBarOverlays(featureEntries, mapDistribution, bounds, scale) {
+  const barEntries = [];
+  const barGroup = new THREE.Group();
+  const normalizedBarData = getNormalizedBarData(
+    featureEntries,
+    mapDistribution
+  );
   const barMetricValues = normalizedBarData.map(function mapBarMetricValue(item) {
     return item.metricValue;
   });
   const maxBarMetricValue = Math.max(...barMetricValues, 1);
 
   normalizedBarData.forEach(function buildBarEntry(barDatum, barIndex) {
-    const { featureEntry, metricValue } = barDatum;
+    const { featureEntry, metricValue, baseMarkerZ } = barDatum;
     const projectedAnchorPoint = getProjectedBarAnchorPoint(
       featureEntry,
       bounds,
@@ -563,6 +572,72 @@ function buildBarOverlays(featureEntries, mapDistribution, bounds, scale) {
     barEntries,
     barGroup
   };
+}
+
+function updateBarOverlays(
+  barEntries,
+  featureEntries,
+  mapDistribution,
+  bounds,
+  scale
+) {
+  if (!barEntries.length) {
+    return;
+  }
+
+  const normalizedBarData = getNormalizedBarData(featureEntries, mapDistribution);
+  const barMetricValues = normalizedBarData.map(function mapBarMetricValue(item) {
+    return item.metricValue;
+  });
+  const maxBarMetricValue = Math.max(...barMetricValues, 1);
+
+  normalizedBarData.forEach(function updateBarEntry(barDatum, barIndex) {
+    const currentBarEntry = barEntries[barIndex];
+    const { featureEntry, metricValue, baseMarkerZ } = barDatum;
+
+    if (!currentBarEntry) {
+      return;
+    }
+
+    const projectedAnchorPoint = getProjectedBarAnchorPoint(
+      featureEntry,
+      bounds,
+      scale
+    );
+
+    if (!projectedAnchorPoint) {
+      currentBarEntry.markerElement.style.display = "none";
+      return;
+    }
+
+    currentBarEntry.markerElement.style.display = "";
+    currentBarEntry.name = barDatum?.name || `点位 ${barIndex + 1}`;
+    currentBarEntry.metricValue = metricValue;
+    currentBarEntry.barHeight = getBarHeight(
+      metricValue,
+      maxBarMetricValue,
+      mapConfig.bar.minHeight,
+      mapConfig.bar.maxHeight
+    );
+    currentBarEntry.baseMarkerZ = baseMarkerZ;
+
+    const updatedMarkerMeta = updateReactBarMarkerObject(
+      currentBarEntry.markerObject,
+      currentBarEntry.markerElement,
+      {
+        x: projectedAnchorPoint.x + mapConfig.bar.offsetX,
+        y: projectedAnchorPoint.y,
+        z: baseMarkerZ,
+        name: currentBarEntry.name,
+        value: metricValue.toLocaleString("zh-CN"),
+        metricValue
+      }
+    );
+
+    if (updatedMarkerMeta) {
+      currentBarEntry.style = updatedMarkerMeta.style;
+    }
+  });
 }
 
 function setFeatureHighlight(featureEntries, activeFeatureIndex) {
@@ -1197,37 +1272,50 @@ function ThreeBlockMap({
 
           cleanupBarPointerEvents();
 
-          if (sceneRuntime.barGroup) {
-            removeBarGroupElements(sceneRuntime.barGroup);
-            scene.remove(sceneRuntime.barGroup);
+          if (sceneRuntime.barGroup && sceneRuntime.barEntries.length > 0) {
+            updateBarOverlays(
+              sceneRuntime.barEntries,
+              featureEntries,
+              nextMapDistribution,
+              bounds,
+              scale
+            );
+            bindBarPointerEvents(sceneRuntime.barEntries);
+          } else {
+            if (sceneRuntime.barGroup) {
+              removeBarGroupElements(sceneRuntime.barGroup);
+              scene.remove(sceneRuntime.barGroup);
+            }
+
+            const { barEntries, barGroup } = buildBarOverlays(
+              featureEntries,
+              nextMapDistribution,
+              bounds,
+              scale
+            );
+            barGroup.rotation.z = THREE.MathUtils.degToRad(
+              mapConfig.map.rotationDegrees
+            );
+            scene.add(barGroup);
+
+            sceneRuntime.barEntries = barEntries;
+            sceneRuntime.barGroup = barGroup;
+            bindBarPointerEvents(barEntries);
           }
 
-          const { barEntries, barGroup } = buildBarOverlays(
-            featureEntries,
-            nextMapDistribution,
-            bounds,
-            scale
-          );
-          barGroup.rotation.z = THREE.MathUtils.degToRad(
-            mapConfig.map.rotationDegrees
-          );
-          scene.add(barGroup);
-
-          sceneRuntime.barEntries = barEntries;
-          sceneRuntime.barGroup = barGroup;
-          bindBarPointerEvents(barEntries);
-
           if (activeBarIndex !== null) {
-            const activeBarStillExists = barEntries.some(function hasActiveBar(barEntry) {
-              return barEntry.barIndex === activeBarIndex;
-            });
+            const activeBarStillExists = sceneRuntime.barEntries.some(
+              function hasActiveBar(barEntry) {
+                return barEntry.barIndex === activeBarIndex;
+              }
+            );
 
             if (!activeBarStillExists) {
               activeBarIndex = null;
             }
           }
 
-          setBarHighlight(barEntries, activeBarIndex);
+          setBarHighlight(sceneRuntime.barEntries, activeBarIndex);
         }
 
         sceneRuntimeRef.current = {

@@ -1,4 +1,4 @@
-export const DEFAULT_REQUEST_TIMEOUT = 15000;
+export const DEFAULT_REQUEST_TIMEOUT = 30000;
 export const DEFAULT_ERROR_MESSAGE = "请求失败，请稍后重试";
 export const AUTH_TOKEN_STORAGE_KEY = "medical-consortium-access-token";
 export const API_SUCCESS_CODES = ["0", "200"];

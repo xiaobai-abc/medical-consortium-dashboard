@@ -7,7 +7,7 @@ import ScreenHeader from "../components/screen-header";
 import { buildHomeDashboardView } from "../modules/dashboard-view-model";
 import SectionBody from "./section";
 
-const DASHBOARD_REFRESH_INTERVAL = 15 * 1000;
+const DASHBOARD_REFRESH_INTERVAL = 60 * 1000 * 3;
 
 /**
  * 首页客户端数据入口。
