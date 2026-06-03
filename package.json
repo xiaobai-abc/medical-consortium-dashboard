@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "deploy" : "npx wrangler pages deploy out"
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",
