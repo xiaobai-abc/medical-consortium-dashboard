@@ -57,7 +57,7 @@ function TopDashboard({ overviewCards, dashboardStatus, dashboardError }) {
                     ? "#FF4D4F"
                     : realtimeWarningsCard.meta?.tone === "up"
                       ? "#28E38A"
-                      : "#E8F0FF",
+                      : "#E8F0FF"
               }}>
               {isLoading
                 ? "加载中"

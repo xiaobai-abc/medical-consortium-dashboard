@@ -3,6 +3,6 @@ compatibility_date = "2026-06-03"
 pages_build_output_dir = "out"
 
 [vars]
-SERVER_API_ORIGIN = "http://121.40.242.155"
+SERVER_API_ORIGIN = "https://medical.tauricdn.com"
 SERVER_API_AUTH_HEADER_NAME = "X-Api-Token"
 SERVER_API_AUTH_SCHEME = ""

@@ -20,9 +20,11 @@ function getHomeHeaderEnv() {
 export function getHomeHeaderData() {
   const headerEnv = getHomeHeaderEnv();
   const currentDateLabel = dayjs().format("YYYY年M月D日 dddd");
+  const statusPrefix = `系统运行正常 ${currentDateLabel}`;
 
   return {
     title: headerEnv.title,
-    statusText: `系统运行正常 ${currentDateLabel} ${headerEnv.weatherText} ${headerEnv.temperatureText}`,
+    statusPrefix,
+    statusText: `${statusPrefix} ${headerEnv.weatherText} ${headerEnv.temperatureText}`,
   };
 }

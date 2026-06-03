@@ -1,13 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
+import { getWeatherData } from "@/api/weather";
 import { getDashboardData } from "@/api";
 import ScreenHeader from "../components/screen-header";
 import { buildHomeDashboardView } from "../modules/dashboard-view-model";
 import SectionBody from "./section";
 
-const DASHBOARD_REFRESH_INTERVAL = 60 * 1000 * 3;
+// const DASHBOARD_REFRESH_INTERVAL = 60 * 1000 * 3;
+const DASHBOARD_REFRESH_INTERVAL = 60 * 1000; // 一分钟
+
+function buildWeatherStatusText(headerData, weatherData) {
+  const currentWeather = weatherData?.results?.[0]?.now;
+
+  if (!currentWeather?.text || !currentWeather?.temperature) {
+    return headerData.statusText;
+  }
+
+  return `${headerData.statusPrefix} ${currentWeather.text} ${currentWeather.temperature}°C`;
+}
 
 /**
  * 首页客户端数据入口。
@@ -20,11 +31,14 @@ const DASHBOARD_REFRESH_INTERVAL = 60 * 1000 * 3;
  * 这样后面继续扩展首页模块时，数据源仍然只有一处。
  */
 function HomeDashboardClient({ headerData }) {
+  const [headerStatusText, setHeaderStatusText] = useState(
+    headerData.statusText
+  );
   const [dashboardState, setDashboardState] = useState({
     status: "loading",
     data: null,
     error: null,
-    isRefreshing: false,
+    isRefreshing: false
   });
   const dashboardStateRef = useRef(dashboardState);
   const requestSequenceRef = useRef(0);
@@ -67,7 +81,7 @@ function HomeDashboardClient({ headerData }) {
         return {
           ...previousDashboardState,
           error: null,
-          isRefreshing: true,
+          isRefreshing: true
         };
       });
     } else {
@@ -75,7 +89,7 @@ function HomeDashboardClient({ headerData }) {
         status: "loading",
         data: null,
         error: null,
-        isRefreshing: true,
+        isRefreshing: true
       });
     }
 
@@ -92,7 +106,7 @@ function HomeDashboardClient({ headerData }) {
           status: "success",
           data: dashboardData,
           error: null,
-          isRefreshing: false,
+          isRefreshing: false
         });
       })
       .catch(function handleError(error) {
@@ -104,12 +118,14 @@ function HomeDashboardClient({ headerData }) {
         }
 
         if (shouldPreserveData) {
-          updateDashboardState(function clearRefreshing(previousDashboardState) {
-            return {
-              ...previousDashboardState,
-              isRefreshing: false,
-            };
-          });
+          updateDashboardState(
+            function clearRefreshing(previousDashboardState) {
+              return {
+                ...previousDashboardState,
+                isRefreshing: false
+              };
+            }
+          );
           return;
         }
 
@@ -117,7 +133,7 @@ function HomeDashboardClient({ headerData }) {
           status: "error",
           data: null,
           error,
-          isRefreshing: false,
+          isRefreshing: false
         });
       })
       .finally(function handleFinally() {
@@ -131,11 +147,28 @@ function HomeDashboardClient({ headerData }) {
     isDisposedRef.current = false;
     requestDashboardData();
 
-    const refreshIntervalId = window.setInterval(function refreshDashboardData() {
-      requestDashboardData({
-        preserveData: true,
+    getWeatherData()
+      .then(function updateHeaderWeather(weatherData) {
+        if (isDisposedRef.current) {
+          return;
+        }
+
+        setHeaderStatusText(buildWeatherStatusText(headerData, weatherData));
+      })
+      .catch(function keepDefaultHeaderWeather() {
+        if (!isDisposedRef.current) {
+          setHeaderStatusText(headerData.statusText);
+        }
       });
-    }, DASHBOARD_REFRESH_INTERVAL);
+
+    const refreshIntervalId = window.setInterval(
+      function refreshDashboardData() {
+        requestDashboardData({
+          preserveData: true
+        });
+      },
+      DASHBOARD_REFRESH_INTERVAL
+    );
 
     return function cleanupDashboardRefreshEffect() {
       isDisposedRef.current = true;
@@ -149,10 +182,10 @@ function HomeDashboardClient({ headerData }) {
     <>
       <ScreenHeader
         title={headerData.title}
-        statusText={headerData.statusText}
+        statusText={headerStatusText}
         onRefresh={function handleRefresh() {
           requestDashboardData({
-            preserveData: true,
+            preserveData: true
           });
         }}
         refreshing={dashboardState.isRefreshing}

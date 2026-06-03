@@ -33,7 +33,11 @@ function defaultRequestInterceptor(requestConfig) {
     }
   }
 
-  if (getUseMockFlag() && !headers.has("X-Use-Mock")) {
+  if (
+    requestConfig.withMock !== false &&
+    getUseMockFlag() &&
+    !headers.has("X-Use-Mock")
+  ) {
     headers.set("X-Use-Mock", "1");
   }
 
