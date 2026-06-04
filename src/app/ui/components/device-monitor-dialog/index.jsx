@@ -16,6 +16,7 @@ import { ScrollArea } from "@/shadcn/ui/scroll-area";
 import { useDeviceMonitorDialog } from "./context";
 import DeviceMonitorDetailDialog from "./detail-dialog";
 import DeviceMonitorFilterSelect from "./filter-select";
+import DialogHeaderInput from "@/app/ui/middle/components/dialog-header-input";
 
 const dialogTitleMap = {
   all: "物联网设备监控",
@@ -76,6 +77,7 @@ function getDialogRequestKey(dialogType, dialogPayload) {
   return JSON.stringify({
     dialogType: dialogType || "all",
     deviceStatus: dialogPayload?.deviceStatus || "",
+    deviceCode: dialogPayload?.deviceCode || dialogPayload?.device_code || "",
     hospitalName: dialogPayload?.hospitalName || "",
     title: dialogPayload?.title || "",
   });
@@ -86,6 +88,8 @@ function getDialogRequestKey(dialogType, dialogPayload) {
  */
 function DeviceMonitorDialogRoot() {
   const [activeDeviceDetail, setActiveDeviceDetail] = useState(null);
+  const [deviceCodeInputValue, setDeviceCodeInputValue] = useState("");
+  const [appliedDeviceCode, setAppliedDeviceCode] = useState("");
   const [selectedDeviceType, setSelectedDeviceType] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [activeDialogKey, setActiveDialogKey] = useState("");
@@ -134,6 +138,23 @@ function DeviceMonitorDialogRoot() {
     setSelectedDeviceType(nextDeviceType);
   }
 
+  function handleDeviceCodeInputChange(event) {
+    setDeviceCodeInputValue(event.target.value);
+  }
+
+  function handleDeviceCodeSearch() {
+    setCurrentPage(1);
+    setAppliedDeviceCode(deviceCodeInputValue.trim());
+  }
+
+  function handleDeviceCodeInputKeyDown(event) {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    handleDeviceCodeSearch();
+  }
+
   function handlePreviousPage() {
     setCurrentPage(function getPreviousPage(previousPage) {
       return Math.max(1, previousPage - 1);
@@ -151,6 +172,8 @@ function DeviceMonitorDialogRoot() {
     function syncDialogQueryState() {
       if (!isOpen) {
         setActiveDialogKey("");
+        setAppliedDeviceCode("");
+        setDeviceCodeInputValue("");
         setSelectedDeviceType("");
         setCurrentPage(1);
         setDialogState({
@@ -166,6 +189,12 @@ function DeviceMonitorDialogRoot() {
       }
 
       clearActiveDeviceDetail();
+      setAppliedDeviceCode(
+        String(dialogPayload?.deviceCode || dialogPayload?.device_code || "")
+      );
+      setDeviceCodeInputValue(
+        String(dialogPayload?.deviceCode || dialogPayload?.device_code || "")
+      );
       setActiveDialogKey(dialogRequestKey);
       setSelectedDeviceType("");
       setCurrentPage(1);
@@ -204,6 +233,7 @@ function DeviceMonitorDialogRoot() {
          * - dialog_type
          * - device_status
          * - hospital_name
+         * - device_code
          * - device_type
          *
          * TODO:
@@ -217,6 +247,7 @@ function DeviceMonitorDialogRoot() {
         dialog_type: dialogType,
         device_status: dialogPayload?.deviceStatus,
         hospital_name: dialogPayload?.hospitalName,
+        device_code: appliedDeviceCode,
         device_type: selectedDeviceType,
         page: currentPage,
         page_size: 10,
@@ -255,7 +286,10 @@ function DeviceMonitorDialogRoot() {
     },
     [
       activeDialogKey,
+      appliedDeviceCode,
       currentPage,
+      dialogPayload?.device_code,
+      dialogPayload?.deviceCode,
       dialogPayload?.deviceStatus,
       dialogPayload?.hospitalName,
       dialogPayload?.title,
@@ -282,7 +316,22 @@ function DeviceMonitorDialogRoot() {
             <DialogTitle className="text-base text-white font-bold">
               {dialogTitle}
             </DialogTitle>
-            <div className="ml-auto mr-0">
+            <div className="ml-auto mr-0 flex items-center gap-2">
+              <DialogHeaderInput
+                value={deviceCodeInputValue}
+                placeholder="设备编号"
+                onChange={handleDeviceCodeInputChange}
+                onKeyDown={handleDeviceCodeInputKeyDown}
+                minWidthClassName="min-w-[180px]"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="h-8 rounded-[10px] border-[#1D3B7A]/75 bg-[#0B1530]/35 px-3 text-xs text-[#E8F0FF] hover:bg-[#00E7FF]/20"
+                onClick={handleDeviceCodeSearch}>
+                查询
+              </Button>
               <DeviceMonitorFilterSelect
                 value={selectedDeviceType}
                 options={dialogState.data.deviceOptions}

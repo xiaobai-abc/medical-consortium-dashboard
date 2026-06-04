@@ -8,7 +8,8 @@ function DialogHeaderInput({
   value,
   placeholder,
   onChange,
-  minWidthClassName
+  minWidthClassName,
+  onKeyDown
 }) {
   return (
     <input
@@ -16,6 +17,7 @@ function DialogHeaderInput({
       value={value}
       placeholder={placeholder}
       onChange={onChange}
+      onKeyDown={onKeyDown}
       className={`h-8 w-fit rounded-[10px] border border-[#1D3B7A]/80 bg-[rgba(13,27,56,0.92)] px-3 text-xs text-[#D6E0F5] outline-none placeholder:text-[#6983B3] focus:border-[#2A62A7] ${minWidthClassName}`}
     />
   );
