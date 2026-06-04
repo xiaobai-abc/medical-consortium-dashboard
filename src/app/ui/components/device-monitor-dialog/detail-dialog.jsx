@@ -84,7 +84,7 @@ function DeviceMonitorDetailDialog({ open, onOpenChange, deviceDetail }) {
         showCloseButton={false}
         className="w-[980px] max-w-[calc(100%-2rem)] border-0 bg-[rgba(7,11,22,0.93)] p-0 text-white ring-0 sm:max-w-[980px]">
         <div
-          className="bd1 flex max-h-[min(780px,calc(100vh-3rem))] flex-col rounded-2xl bg-[#1b233a] px-4 py-4"
+          className="bd1 flex max-h-[min(800px,calc(100vh-3rem))] flex-col rounded-2xl bg-[#1b233a] px-4 py-4 pb-30"
           style={{
             background:
               "radial-gradient(ellipse at left 10% top 10%, rgb(0 231 255 / 10%), transparent 55%),linear-gradient(to bottom,rgb(11 21 48 / 95%) 0%, rgb(11 21 48 / 85%) 100%)"

@@ -101,6 +101,21 @@ function formatOption(option, index) {
   };
 }
 
+function dedupeOptionsByValue(options) {
+  const seenValues = new Set();
+
+  return options.filter(function keepFirstOption(option) {
+    const optionValue = String(option?.value ?? "");
+
+    if (seenValues.has(optionValue)) {
+      return false;
+    }
+
+    seenValues.add(optionValue);
+    return true;
+  });
+}
+
 export function normalizeSelectOptions(source, candidates, fallbackOptions = []) {
   /**
    * 大部分 popup 都会返回筛选项 options。
@@ -339,19 +354,21 @@ export function normalizeDeviceListPopup(responseData, fallbackTitle) {
 
   return {
     title: summary?.title || fallbackTitle,
-    deviceOptions:
-      [
-        { label: "筛选设备", value: "" },
-        ...deviceTypeOptions.map(function mapDeviceTypeOption(option, index) {
-          return {
-            label: String(option?.name || `设备 ${index + 1}`),
-            value: String(option?.code ?? ""),
-          };
-        }),
-      ],
+    deviceOptions: dedupeOptionsByValue([
+      { label: "筛选设备", value: "" },
+      ...deviceTypeOptions.map(function mapDeviceTypeOption(option, index) {
+        return {
+          label: String(option?.name || `设备 ${index + 1}`),
+          value: String(option?.code ?? ""),
+        };
+      }),
+    ]),
     items: itemsSource.map(function mapItem(item, index) {
+      const deviceCode = item?.device_code || item?.sn || `DEV-${index + 1}`;
+
       return {
-        deviceCode: item?.device_code || item?.sn || `DEV-${index + 1}`,
+        id: String(item?.id || item?.device_id || `${deviceCode}-${index + 1}`),
+        deviceCode,
         statusText: item?.status_text || "-",
         statusColor: item?.status === "online" ? "#22C55E" : "#FF4D4F",
         deviceType: item?.device_type_name || item?.device_type || "-",

@@ -36,6 +36,51 @@ const deviceSummaryColumns = [
   ]
 ];
 
+function createInitialDialogData(title = dialogTitleMap.all) {
+  return {
+    title,
+    deviceOptions: [{ label: "筛选设备", value: "" }],
+    items: [],
+    pagination: {
+      page: 1,
+      pageSize: 10,
+      total: 0,
+      totalPages: 1,
+      hasMore: false,
+    },
+  };
+}
+
+function createLoadingDialogData(previousData, title = dialogTitleMap.all, page = 1) {
+  const previousPagination = previousData?.pagination || {};
+  const nextPageSize = previousData?.pagination?.pageSize || 10;
+
+  return {
+    title,
+    deviceOptions:
+      Array.isArray(previousData?.deviceOptions) && previousData.deviceOptions.length > 0
+        ? previousData.deviceOptions
+        : [{ label: "筛选设备", value: "" }],
+    items: [],
+    pagination: {
+      page,
+      pageSize: nextPageSize,
+      total: previousPagination.total || 0,
+      totalPages: previousPagination.totalPages || 1,
+      hasMore: Boolean(previousPagination.hasMore),
+    },
+  };
+}
+
+function getDialogRequestKey(dialogType, dialogPayload) {
+  return JSON.stringify({
+    dialogType: dialogType || "all",
+    deviceStatus: dialogPayload?.deviceStatus || "",
+    hospitalName: dialogPayload?.hospitalName || "",
+    title: dialogPayload?.title || "",
+  });
+}
+
 /**
  * 设备监控弹窗根组件在页面中只挂载一次，所有入口共享这一份实例。
  */
@@ -43,29 +88,20 @@ function DeviceMonitorDialogRoot() {
   const [activeDeviceDetail, setActiveDeviceDetail] = useState(null);
   const [selectedDeviceType, setSelectedDeviceType] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeDialogKey, setActiveDialogKey] = useState("");
   const [dialogState, setDialogState] = useState({
     status: "idle",
-    data: {
-      title: dialogTitleMap.all,
-      deviceOptions: [{ label: "筛选设备", value: "" }],
-      items: [],
-      pagination: {
-        page: 1,
-        pageSize: 10,
-        total: 0,
-        totalPages: 1,
-        hasMore: false,
-      },
-    },
+    data: createInitialDialogData(),
     error: null,
   });
   const { isOpen, dialogType, dialogPayload, closeDeviceMonitorDialog } =
     useDeviceMonitorDialog();
+  const dialogRequestKey = getDialogRequestKey(dialogType, dialogPayload);
+  const fallbackDialogTitle =
+    dialogPayload?.title || dialogTitleMap[dialogType] || dialogTitleMap.all;
   const dialogTitle =
     dialogState.data.title ||
-    dialogPayload?.title ||
-    dialogTitleMap[dialogType] ||
-    dialogTitleMap.all;
+    fallbackDialogTitle;
   const detailDialogOpen = Boolean(activeDeviceDetail);
 
   function clearActiveDeviceDetail() {
@@ -112,8 +148,39 @@ function DeviceMonitorDialogRoot() {
   }
 
   useEffect(
-    function requestDeviceListPopup() {
+    function syncDialogQueryState() {
       if (!isOpen) {
+        setActiveDialogKey("");
+        setSelectedDeviceType("");
+        setCurrentPage(1);
+        setDialogState({
+          status: "idle",
+          data: createInitialDialogData(),
+          error: null,
+        });
+        return;
+      }
+
+      if (activeDialogKey === dialogRequestKey) {
+        return;
+      }
+
+      clearActiveDeviceDetail();
+      setActiveDialogKey(dialogRequestKey);
+      setSelectedDeviceType("");
+      setCurrentPage(1);
+      setDialogState({
+        status: "loading",
+        data: createInitialDialogData(fallbackDialogTitle),
+        error: null,
+      });
+    },
+    [activeDialogKey, dialogRequestKey, fallbackDialogTitle, isOpen]
+  );
+
+  useEffect(
+    function requestDeviceListPopup() {
+      if (!isOpen || activeDialogKey !== dialogRequestKey) {
         return;
       }
 
@@ -121,8 +188,12 @@ function DeviceMonitorDialogRoot() {
 
       setDialogState(function setLoadingState(previousState) {
         return {
-          ...previousState,
           status: "loading",
+          data: createLoadingDialogData(
+            previousState.data,
+            fallbackDialogTitle,
+            currentPage
+          ),
           error: null,
         };
       });
@@ -148,7 +219,7 @@ function DeviceMonitorDialogRoot() {
         hospital_name: dialogPayload?.hospitalName,
         device_type: selectedDeviceType,
         page: currentPage,
-        page_size: dialogState.data.pagination?.pageSize || 10,
+        page_size: 10,
       })
         .then(function handleSuccess(responseData) {
           if (disposed) {
@@ -159,7 +230,7 @@ function DeviceMonitorDialogRoot() {
             status: "success",
             data: normalizeDeviceListPopup(
               responseData,
-              dialogPayload?.title || dialogTitleMap[dialogType] || dialogTitleMap.all
+              fallbackDialogTitle
             ),
             error: null,
           });
@@ -183,24 +254,17 @@ function DeviceMonitorDialogRoot() {
       };
     },
     [
+      activeDialogKey,
       currentPage,
       dialogPayload?.deviceStatus,
       dialogPayload?.hospitalName,
       dialogPayload?.title,
       dialogType,
+      dialogRequestKey,
+      fallbackDialogTitle,
       isOpen,
       selectedDeviceType
     ]
-  );
-
-  useEffect(
-    function resetDeviceFilterWhenDialogChanges() {
-      if (!isOpen) {
-        setSelectedDeviceType("");
-        setCurrentPage(1);
-      }
-    },
-    [isOpen]
   );
 
   return (
@@ -244,7 +308,7 @@ function DeviceMonitorDialogRoot() {
               {dialogState.data.items.map(function renderDeviceCard(deviceItem) {
                 return (
                   <DeviceCard
-                    key={deviceItem.deviceCode}
+                    key={deviceItem.id}
                     deviceItem={deviceItem}
                     onClick={handleDeviceClick}
                   />

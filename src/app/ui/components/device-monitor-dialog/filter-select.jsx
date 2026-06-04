@@ -55,11 +55,13 @@ function DeviceMonitorFilterSelect({ value = "", options, onValueChange }) {
         align="start"
         className="max-h-[320px] border border-[#2452A4]/80 bg-[rgba(8,18,40,0.98)] p-1 text-[#D6E0F5] shadow-[0_12px_30px_rgba(2,8,20,0.5)]">
         <SelectGroup className="p-0">
-          {normalizedOptions.map(function renderDeviceOption(option) {
+          {normalizedOptions.map(function renderDeviceOption(option, index) {
+            const optionValue = getOptionValue(option);
+
             return (
               <SelectItem
-                key={getOptionValue(option)}
-                value={getOptionValue(option)}
+                key={optionValue || `device-option-${index}`}
+                value={optionValue}
                 className="min-h-9 rounded-[4px] border border-transparent px-3 text-[13px] text-[#DCE7FB] focus:border-[#3A67C5] focus:bg-[rgba(33,73,170,0.35)] focus:text-white">
                 {getOptionLabel(option)}
               </SelectItem>
